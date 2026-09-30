@@ -1,0 +1,170 @@
+/*
+ * The storefront's look. Scoped to `.store` so the dashboard keeps the kit's theme, and written as
+ * the kit's own variables so kit components (inputs, sheet, buttons) pick it up without a fork.
+ * Anything portalled out of the page (the checkout sheet) carries `.store` itself.
+ *
+ * Gift-wrap colours: plum ink, ribbon magenta, gold foil on a lilac tissue-paper ground. Swap the
+ * five `--am-*` values for Amoria's brand colours once they supply them; nothing else refers to
+ * a colour directly.
+ */
+.store {
+	--am-ink: #2e1330;
+	--am-ribbon: #b0175a;
+	--am-foil: #b8892b;
+	--am-tissue: #fbf7fb;
+	--am-muted: #6f5f72;
+
+	--background: var(--am-tissue);
+	--foreground: var(--am-ink);
+	--card: #ffffff;
+	--card-foreground: var(--am-ink);
+	--popover: #ffffff;
+	--popover-foreground: var(--am-ink);
+	--primary: var(--am-ribbon);
+	--primary-foreground: #ffffff;
+	--secondary: #f1e6f0;
+	--secondary-foreground: var(--am-ink);
+	--muted: #f1e6f0;
+	--muted-foreground: var(--am-muted);
+	--accent: #f1e6f0;
+	--accent-foreground: var(--am-ink);
+	--border: #e6d6e4;
+	--input: #dcc8d9;
+	--ring: color-mix(in oklab, var(--am-ribbon) 45%, transparent);
+	--radius: 0.75rem;
+
+	font-family: 'Noto Sans', 'Noto Sans Ethiopic', system-ui, sans-serif;
+	background: var(--background);
+	color: var(--foreground);
+	-webkit-font-smoothing: antialiased;
+}
+
+/* Amharic runs taller; give its lines room. */
+.store:lang(am),
+:lang(am) .store {
+	line-height: 1.7;
+}
+
+.store .display {
+	font-family: 'Bricolage Grotesque', 'Noto Sans Ethiopic', system-ui, sans-serif;
+	font-optical-sizing: auto;
+	letter-spacing: -0.02em;
+}
+
+.store :focus-visible {
+	outline: 2px solid var(--am-ribbon);
+	outline-offset: 2px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+	.store *,
+	.store *::before,
+	.store *::after {
+		animation-duration: 0.01ms !important;
+		transition-duration: 0.01ms !important;
+	}
+}
+
+/* ------------------------------------------------------------------ */
+/* Home page motion. Every rule here is switched off for reduced motion, */
+/* by the block above (durations) and by `reveal` itself (no hiding).    */
+/* ------------------------------------------------------------------ */
+
+.store .accent {
+	font-family: 'Fraunces', 'Noto Sans Ethiopic', Georgia, serif;
+	font-style: italic;
+	font-weight: 400;
+	letter-spacing: -0.01em;
+}
+.store:lang(am) .accent,
+:lang(am) .store .accent {
+	font-family: inherit;
+	font-style: normal;
+	font-weight: 600;
+}
+
+/* Scroll reveal: `reveal` sets pending, then in. Stagger siblings with style="--i:n". */
+.store [data-reveal] {
+	transition:
+		opacity 0.9s cubic-bezier(0.2, 0.7, 0.2, 1) calc(var(--i, 0) * 90ms),
+		transform 0.9s cubic-bezier(0.2, 0.7, 0.2, 1) calc(var(--i, 0) * 90ms);
+}
+.store [data-reveal='pending'] {
+	opacity: 0;
+	transform: translateY(28px);
+}
+.store [data-reveal='in'] {
+	opacity: 1;
+	transform: none;
+}
+
+/* A soft light that follows the pointer across a card (see `spotlight` in $lib/actions). */
+.store .spotlight {
+	position: relative;
+	overflow: hidden;
+}
+.store .spotlight::before {
+	content: '';
+	position: absolute;
+	inset: 0;
+	opacity: 0;
+	pointer-events: none;
+	transition: opacity 0.4s;
+	background: radial-gradient(
+		22rem circle at var(--px, 50%) var(--py, 50%),
+		color-mix(in oklab, var(--am-ribbon) 11%, transparent),
+		transparent 60%
+	);
+}
+.store .spotlight:hover::before {
+	opacity: 1;
+}
+
+/* A sheen sweeps across a primary button on hover. */
+.store .btn-shine {
+	position: relative;
+	overflow: hidden;
+}
+.store .btn-shine::after {
+	content: '';
+	position: absolute;
+	inset: 0;
+	background: linear-gradient(105deg, transparent 35%, rgb(255 255 255 / 0.4) 50%, transparent 65%);
+	transform: translateX(-120%);
+	transition: transform 0.9s ease;
+}
+.store .btn-shine:hover::after {
+	transform: translateX(120%);
+}
+
+/* Headline lines slide up out of a mask; --i staggers them. */
+.store .line {
+	display: block;
+	overflow: hidden;
+	padding-bottom: 0.14em;
+	margin-bottom: -0.14em;
+}
+.store .line-in {
+	display: block;
+	animation: line-up 1.1s cubic-bezier(0.2, 0.75, 0.2, 1) calc(var(--i, 0) * 0.14s + 0.05s) both;
+}
+.store .rise {
+	animation: rise-in 0.9s cubic-bezier(0.2, 0.75, 0.2, 1) calc(var(--i, 0) * 0.12s + 0.1s) both;
+}
+@keyframes line-up {
+	from {
+		transform: translateY(112%);
+	}
+}
+@keyframes rise-in {
+	from {
+		opacity: 0;
+		transform: translateY(18px);
+	}
+}
+@media (prefers-reduced-motion: reduce) {
+	.store .line-in,
+	.store .rise {
+		animation: none;
+	}
+}

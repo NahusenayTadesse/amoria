@@ -1,0 +1,10 @@
+@import '@nahu/admin-kit/styles/theme.css';
+
+/*
+ * The kit's form labels and select triggers are `capitalize`d, which turns sentence-case copy into
+ * Title Case ("Password (At Least 10 Characters)"). Amoria writes every label as a sentence.
+ */
+[data-slot='label'],
+[data-slot='select-trigger'] {
+	text-transform: none;
+}
