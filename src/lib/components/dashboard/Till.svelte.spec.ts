@@ -73,6 +73,14 @@ describe('Till', () => {
 		await expect.element(page.getByText('ETB 850.00').first()).toBeInTheDocument();
 	});
 
+	it('keeps the results list closed after a scan, once the typing search would have run', async () => {
+		renderTill();
+		await scan();
+		await expect.element(page.getByText('Silk scarf')).toBeInTheDocument();
+		await new Promise((done) => setTimeout(done, 400));
+		expect(page.getByText('Silk scarf').elements()).toHaveLength(1);
+	});
+
 	it('cannot complete a sale until it is paid, and says how much is still to pay', async () => {
 		renderTill();
 		await scan();

@@ -108,6 +108,8 @@
 
 	/** Enter: an exact barcode or SKU adds at once (a scanner ends its digits with Enter). */
 	async function onEnter() {
+		// The search typing started would otherwise land after the scan and reopen the list.
+		clearTimeout(timer);
 		const text = query.trim();
 		if (!text) return;
 		const list = await find(text);

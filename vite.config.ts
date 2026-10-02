@@ -69,6 +69,21 @@ export default defineConfig({
 		projects: [
 			{
 				extends: './vite.config.ts',
+				plugins: [
+					{
+						// A component's `<img src="/media/…">` would reach SvelteKit's real route, which loads
+						// hooks.server.ts (auth, the database) inside the test server; when that races the
+						// server's start it throws "reading 'wrapDynamicImport'" and keeps the run alive 10s
+						// past the last test. Component tests check the URL, never the file: answer here.
+						name: 'no-media-in-component-tests',
+						configureServer(server) {
+							server.middlewares.use('/media', (_req, res) => {
+								res.statusCode = 404;
+								res.end();
+							});
+						}
+					}
+				],
 				test: {
 					name: 'client',
 					browser: {
