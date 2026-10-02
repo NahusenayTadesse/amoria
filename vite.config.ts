@@ -4,6 +4,7 @@ import { defineConfig } from 'vitest/config';
 import { playwright } from '@vitest/browser-playwright';
 import adapter from '@sveltejs/adapter-node';
 import { sveltekit } from '@sveltejs/kit/vite';
+import { adminKit } from '@nahu/admin-kit/vite';
 import { globSync, readFileSync } from 'node:fs';
 
 /**
@@ -57,7 +58,10 @@ export default defineConfig({
 			emitTsDeclarations: true,
 			// `/…` English, `/am/…` Amharic (§1), then the visitor's last choice.
 			strategy: ['url', 'cookie', 'baseLocale']
-		})
+		}),
+
+		// Lets Vite 8's dependency scan read the kit's components (see the kit's src/lib/vite.ts).
+		adminKit()
 	],
 	optimizeDeps: { include: clientDependencies() },
 	test: {
