@@ -1,4 +1,5 @@
 import { and, asc, count, desc, eq, gte, inArray, lt, or, isNull, gt } from 'drizzle-orm';
+import type { SQL } from 'drizzle-orm';
 import type { Writer } from '@nahu/admin-kit/server/db';
 import { insertReturningId } from '@nahu/admin-kit/server/db/insert';
 import { notDeleted } from '@nahu/admin-kit/server/softDelete';
@@ -14,11 +15,14 @@ import {
 	courseIntake,
 	customer,
 	payment,
-	registration
+	registration,
+	schoolShift
 } from '$lib/server/db/schema';
 import { cached, invalidate } from '$lib/server/cache';
 import { formatRef, publicToken } from '$lib/server/tokens';
 import { REGISTRATION_TRANSITIONS, type RegistrationStatus } from '$lib/registrationStatus';
+import type { REGISTRATION_RESULTS } from '$lib/constants';
+import { classKey, MAX_PLANNED_CLASSES } from '$lib/schoolPlan';
 import { m } from '$lib/paraglide/messages.js';
 import { upsertGuest, type GuestDetails } from './customers';
 import { getSettings } from './settings';
@@ -80,7 +84,23 @@ export type SchoolIntake = {
 	scheduleText: string | null;
 	seatLimit: number;
 	seatsLeft: number;
+	/** The class's shift (morning, afternoon…); all null for a course run in a single shift. */
+	shiftId: number | null;
+	shiftName: string | null;
+	shiftNameAm: string | null;
+	shiftTime: string | null;
 };
+
+/** The shift columns every public class read carries, from a left join on `school_shift`. */
+const shiftColumns = {
+	shiftId: courseIntake.shiftId,
+	shiftName: schoolShift.name,
+	shiftNameAm: schoolShift.nameAm,
+	shiftTime: schoolShift.timeText
+};
+
+/** Classes in date order, and within a date range in shift order. */
+const classOrder = [asc(courseIntake.startDate), asc(schoolShift.sortOrder), asc(courseIntake.id)];
 
 export type SchoolCourse = {
 	id: number;
@@ -91,6 +111,8 @@ export type SchoolCourse = {
 	summaryAm: string | null;
 	fee: number;
 	durationText: string | null;
+	/** Days one run lasts; null means `DEFAULT_COURSE_DAYS`. */
+	durationDays: number | null;
 	image: string | null;
 	imageAlt: string | null;
 	/** The next intake with a seat, if any. */
@@ -109,11 +131,13 @@ async function intakesFor(courseIds: number[]): Promise<Map<number, SchoolIntake
 			startDate: courseIntake.startDate,
 			endDate: courseIntake.endDate,
 			scheduleText: courseIntake.scheduleText,
-			seatLimit: courseIntake.seatLimit
+			seatLimit: courseIntake.seatLimit,
+			...shiftColumns
 		})
 		.from(courseIntake)
+		.leftJoin(schoolShift, eq(schoolShift.id, courseIntake.shiftId))
 		.where(and(inArray(courseIntake.courseId, courseIds), joinable()))
-		.orderBy(asc(courseIntake.startDate));
+		.orderBy(...classOrder);
 	if (!rows.length) return byCourse;
 
 	const taken = await db
@@ -169,7 +193,8 @@ export function schoolCourses(): Promise<SchoolCourse[]> {
 				summary: course.summary,
 				summaryAm: course.summaryAm,
 				fee: course.fee,
-				durationText: course.durationText
+				durationText: course.durationText,
+				durationDays: course.durationDays
 			})
 			.from(course)
 			.where(liveCourse())
@@ -213,7 +238,8 @@ export async function schoolCourse(slug: string): Promise<SchoolCourseDetail | n
 			curriculum: course.curriculum,
 			curriculumAm: course.curriculumAm,
 			fee: course.fee,
-			durationText: course.durationText
+			durationText: course.durationText,
+			durationDays: course.durationDays
 		})
 		.from(course)
 		.where(and(eq(course.slug, slug), liveCourse()));
@@ -246,6 +272,7 @@ export async function joinableIntake(intakeId: number) {
 			endDate: courseIntake.endDate,
 			scheduleText: courseIntake.scheduleText,
 			seatLimit: courseIntake.seatLimit,
+			...shiftColumns,
 			courseSlug: course.slug,
 			courseTitle: course.title,
 			courseTitleAm: course.titleAm,
@@ -253,6 +280,7 @@ export async function joinableIntake(intakeId: number) {
 		})
 		.from(courseIntake)
 		.innerJoin(course, and(eq(course.id, courseIntake.courseId), liveCourse()))
+		.leftJoin(schoolShift, eq(schoolShift.id, courseIntake.shiftId))
 		.where(and(eq(courseIntake.id, intakeId), joinable()));
 	if (!row) return null;
 	return { ...row, seatsLeft: Math.max(0, row.seatLimit - (await seatsTaken(db, row.id))) };
@@ -485,7 +513,7 @@ export async function setRegistrationStatus(
 			if (!intake || (await seatsTaken(tx, row.intakeId)) >= intake.seatLimit) {
 				throw new WriteRefused(
 					null,
-					'That intake is still full. Raise its seat limit first, or cancel and refund.'
+					'That class is still full. Raise its max students first, or cancel and refund.'
 				);
 			}
 		}
@@ -556,11 +584,13 @@ export async function registrationByToken(token: string) {
 			courseTitleAm: course.titleAm,
 			startDate: courseIntake.startDate,
 			endDate: courseIntake.endDate,
-			scheduleText: courseIntake.scheduleText
+			scheduleText: courseIntake.scheduleText,
+			...shiftColumns
 		})
 		.from(registration)
 		.innerJoin(courseIntake, eq(courseIntake.id, registration.intakeId))
 		.innerJoin(course, eq(course.id, courseIntake.courseId))
+		.leftJoin(schoolShift, eq(schoolShift.id, courseIntake.shiftId))
 		.where(eq(registration.publicToken, token));
 	if (!row) return null;
 
@@ -589,4 +619,203 @@ export async function customerEmail(customerId: number) {
 		.from(customer)
 		.where(eq(customer.id, customerId));
 	return row?.email ?? null;
+}
+
+/* ------------------------------ Class builder ------------------------------ */
+
+export type PlannedClass = {
+	startDate: string;
+	endDate: string;
+	shiftId: number | null;
+	seatLimit: number;
+};
+
+/**
+ * Creates a batch of classes for a course (the dashboard's class builder), in one transaction. A
+ * class that already exists — same course, first day and shift — is skipped, not doubled, so
+ * running the builder twice over the same months is harmless. Every shift must exist and be in use.
+ */
+export async function createClasses(courseId: number, planned: PlannedClass[], actor: Actor) {
+	if (planned.length > MAX_PLANNED_CLASSES) {
+		throw new WriteRefused(null, `At most ${MAX_PLANNED_CLASSES} classes at a time.`);
+	}
+
+	const result = await transaction(async (tx) => {
+		const [owner] = await tx
+			.select({ id: course.id })
+			.from(course)
+			.where(and(eq(course.id, courseId), notDeleted(course)))
+			.for('update');
+		if (!owner) throw new WriteRefused(null, 'That course does not exist.');
+
+		const shiftIds = [...new Set(planned.flatMap((p) => (p.shiftId ? [p.shiftId] : [])))];
+		if (shiftIds.length) {
+			const live = await tx
+				.select({ id: schoolShift.id })
+				.from(schoolShift)
+				.where(
+					and(
+						inArray(schoolShift.id, shiftIds),
+						eq(schoolShift.status, true),
+						notDeleted(schoolShift)
+					)
+				);
+			if (live.length !== shiftIds.length) {
+				throw new WriteRefused(null, 'One of the shifts is no longer in use. Reload the page.');
+			}
+		}
+
+		const existing = await tx
+			.select({ startDate: courseIntake.startDate, shiftId: courseIntake.shiftId })
+			.from(courseIntake)
+			.where(and(eq(courseIntake.courseId, courseId), notDeleted(courseIntake)));
+		const taken = new Set(existing.map((row) => classKey(row.startDate, row.shiftId)));
+
+		let created = 0;
+		let skipped = 0;
+		for (const row of planned) {
+			const key = classKey(row.startDate, row.shiftId);
+			if (taken.has(key)) {
+				skipped++;
+				continue;
+			}
+			taken.add(key);
+			const id = await insertReturningId(tx, courseIntake, {
+				courseId,
+				startDate: row.startDate,
+				endDate: row.endDate,
+				shiftId: row.shiftId,
+				seatLimit: row.seatLimit,
+				status: 'open'
+			});
+			await recordAudit(tx, actor, {
+				table: 'course_intake',
+				recordId: id,
+				action: 'create',
+				after: { courseId, ...row },
+				detail: { via: 'class builder' }
+			});
+			created++;
+		}
+		return { created, skipped };
+	});
+
+	if (result.created) invalidate('catalog');
+	return result;
+}
+
+/**
+ * Another live class of this course with the same first day and shift, other than `exceptId`.
+ * The single-class form uses it to refuse a double; the builder skips them instead.
+ */
+export async function sameClassExists(
+	courseId: number,
+	startDate: string,
+	shiftId: number | null,
+	exceptId?: number
+) {
+	const conditions: (SQL | undefined)[] = [
+		eq(courseIntake.courseId, courseId),
+		eq(courseIntake.startDate, startDate),
+		shiftId ? eq(courseIntake.shiftId, shiftId) : isNull(courseIntake.shiftId),
+		notDeleted(courseIntake)
+	];
+	const rows = await db
+		.select({ id: courseIntake.id })
+		.from(courseIntake)
+		.where(and(...conditions));
+	return rows.some((row) => row.id !== exceptId);
+}
+
+/* -------------------------------- Results and certificates -------------------------------- */
+
+export type RegistrationResult = (typeof REGISTRATION_RESULTS)[number];
+
+/** The certificate's number, from the registration's id: `AM-C-000123`. */
+export const certificateNumber = (registrationId: number) =>
+	`AM-C-${String(registrationId).padStart(6, '0')}`;
+
+/**
+ * Marks how a student finished (§11 "School"): `graduated` issues their certificate, anything
+ * else withdraws it. Only a confirmed (paid) student can be marked, and only once their class has
+ * reached its last day. The certificate keeps its number if it is withdrawn and issued again.
+ */
+export async function setResult(registrationId: number, result: RegistrationResult, actor: Actor) {
+	await transaction(async (tx) => {
+		const [row] = await tx
+			.select({
+				status: registration.status,
+				result: registration.result,
+				certificateNo: registration.certificateNo,
+				startDate: courseIntake.startDate,
+				endDate: courseIntake.endDate
+			})
+			.from(registration)
+			.innerJoin(courseIntake, eq(courseIntake.id, registration.intakeId))
+			.where(eq(registration.id, registrationId))
+			.for('update');
+		if (!row) throw new WriteRefused(null, 'That registration does not exist.');
+		if (row.status !== 'confirmed') {
+			throw new WriteRefused(null, 'Only a confirmed (paid) student can be given a result.');
+		}
+		if ((row.endDate ?? row.startDate) > localToday()) {
+			throw new WriteRefused(null, 'The class has not reached its last day yet.');
+		}
+		if (row.result === result) return;
+
+		const graduated = result === 'graduated';
+		await tx
+			.update(registration)
+			.set({
+				result,
+				certificateNo: graduated
+					? (row.certificateNo ?? certificateNumber(registrationId))
+					: undefined,
+				certificateIssuedAt: graduated ? new Date() : null
+			})
+			.where(eq(registration.id, registrationId));
+		await recordAudit(tx, actor, {
+			table: 'registration',
+			recordId: registrationId,
+			action: 'update',
+			before: { result: row.result },
+			after: { result }
+		});
+	});
+}
+
+/** What a printed certificate says. Null unless the student graduated. */
+export async function certificateFor(where: { id: number } | { token: string }) {
+	const [row] = await db
+		.select({
+			id: registration.id,
+			name: registration.contactName,
+			result: registration.result,
+			certificateNo: registration.certificateNo,
+			issuedAt: registration.certificateIssuedAt,
+			courseTitle: course.title,
+			courseTitleAm: course.titleAm,
+			startDate: courseIntake.startDate,
+			endDate: courseIntake.endDate,
+			shiftName: schoolShift.name
+		})
+		.from(registration)
+		.innerJoin(courseIntake, eq(courseIntake.id, registration.intakeId))
+		.innerJoin(course, eq(course.id, courseIntake.courseId))
+		.leftJoin(schoolShift, eq(schoolShift.id, courseIntake.shiftId))
+		.where(
+			'id' in where ? eq(registration.id, where.id) : eq(registration.publicToken, where.token)
+		);
+	if (!row || row.result !== 'graduated' || !row.certificateNo || !row.issuedAt) return null;
+	return { ...row, certificateNo: row.certificateNo, issuedAt: row.issuedAt };
+}
+
+/** The link name of the course a class belongs to, for old `/school/register/<id>` links. */
+export async function classCourseSlug(intakeId: number) {
+	const [row] = await db
+		.select({ slug: course.slug })
+		.from(courseIntake)
+		.innerJoin(course, eq(course.id, courseIntake.courseId))
+		.where(eq(courseIntake.id, intakeId));
+	return row?.slug ?? null;
 }

@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { resolve } from '$app/paths';
 	import { enhance } from '$app/forms';
+	import Award from '@lucide/svelte/icons/award';
 	import CalendarDays from '@lucide/svelte/icons/calendar-days';
 	import * as Card from '@nahu/admin-kit/components/ui/card/index.js';
 	import { Button } from '@nahu/admin-kit/components/ui/button/index.js';
@@ -26,6 +27,17 @@
 		data.payments.filter((p) => p.provider === 'bank_transfer' && p.status === 'initiated')
 	);
 	const day = (value: string) => ethiopianDate(new Date(`${value}T12:00:00+03:00`));
+
+	const RESULT_LABELS = {
+		pending: 'Not marked yet',
+		graduated: 'Graduated',
+		not_graduated: 'Did not graduate'
+	} as const;
+	const RESULT_BUTTONS = [
+		{ to: 'graduated', label: 'Graduated: issue certificate' },
+		{ to: 'not_graduated', label: 'Did not graduate' },
+		{ to: 'pending', label: 'Clear the result' }
+	] as const;
 
 	function confirmCancel(event: SubmitEvent) {
 		const paid = REGISTRATION_PAID.includes(reg.status);
@@ -74,8 +86,8 @@
 	{/if}
 	{#if reg.status === 'paid_unfulfillable'}
 		<Notice tone="warning">
-			The payment arrived after the seat was released and the intake filled up meanwhile. Call the
-			student to move them to another intake (raise this intake's seat limit, then "Give a seat"),
+			The payment arrived after the seat was released and the class filled up meanwhile. Call the
+			student to move them to another class (raise this class's max students, then "Give a seat"),
 			or refund them and cancel.
 		</Notice>
 	{/if}
@@ -106,7 +118,7 @@
 		</Card.Root>
 
 		<Card.Root>
-			<Card.Header><Card.Title>Course and intake</Card.Title></Card.Header>
+			<Card.Header><Card.Title>Course and class</Card.Title></Card.Header>
 			<Card.Content class="flex flex-col gap-3 text-sm">
 				<a
 					class="text-base font-medium text-primary hover:underline"
@@ -120,6 +132,9 @@
 						From {day(data.intake.startDate)}{data.intake.endDate
 							? `, to ${day(data.intake.endDate)}`
 							: ''}
+						{#if data.intake.shiftName}
+							<span class="block text-muted-foreground">{data.intake.shiftName} shift</span>
+						{/if}
 						{#if data.intake.scheduleText}
 							<span class="block text-muted-foreground">{data.intake.scheduleText}</span>
 						{/if}
@@ -131,13 +146,73 @@
 						class="text-primary hover:underline"
 						href={resolve(
 							`/dashboard/school/students?intake=${data.intake.id}&queue=all` as '/dashboard/school/students'
-						)}>See this intake's students</a
+						)}>See this class's students</a
 					>
 				</p>
 				<p class="font-medium">Fee {formatETB(reg.feeSnapshot)}</p>
 			</Card.Content>
 		</Card.Root>
 	</div>
+
+	<Card.Root>
+		<Card.Header>
+			<Card.Title class="flex items-center gap-2"
+				><Award class="size-5" /> Result and certificate</Card.Title
+			>
+			<Card.Description>
+				Every student who qualifies at the end of the class gets a certificate. Marking one
+				graduated issues it; they can print it from their registration link too.
+			</Card.Description>
+		</Card.Header>
+		<Card.Content class="flex flex-col gap-3 text-sm">
+			<p>
+				Result: <Statuses
+					status={reg.result === 'graduated'
+						? 'active'
+						: reg.result === 'not_graduated'
+							? 'inactive'
+							: 'pending'}
+					label={RESULT_LABELS[reg.result]}
+				/>
+			</p>
+			{#if reg.result === 'graduated' && reg.certificateNo}
+				<p>
+					Certificate {reg.certificateNo}{reg.certificateIssuedAt
+						? `, issued ${ethiopianDateTime(reg.certificateIssuedAt)}`
+						: ''}.
+					<a
+						class="text-primary hover:underline"
+						href={resolve('/dashboard/school/students/[id]/certificate', { id: String(reg.id) })}
+						>Open and print</a
+					>
+				</p>
+			{/if}
+			{#if reg.status !== 'confirmed'}
+				<p class="text-muted-foreground">Only a confirmed (paid) student can be given a result.</p>
+			{:else if !data.intake.ended}
+				<p class="text-muted-foreground">
+					The result can be marked from the class's last day, {day(
+						data.intake.endDate ?? data.intake.startDate
+					)}.
+				</p>
+			{:else}
+				<div class="flex flex-wrap gap-2">
+					{#each RESULT_BUTTONS.filter((b) => b.to !== reg.result) as button (button.to)}
+						<form method="POST" action="?/result" use:enhance={quick}>
+							<input type="hidden" name="result" value={button.to} />
+							<Button
+								type="submit"
+								size="sm"
+								variant={button.to === 'graduated' ? 'default' : 'outline'}
+							>
+								{button.label}
+							</Button>
+						</form>
+					{/each}
+				</div>
+			{/if}
+		</Card.Content>
+	</Card.Root>
 
 	<PaymentsCard
 		payments={data.payments}

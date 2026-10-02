@@ -13,17 +13,37 @@ import {
 	course,
 	courseIntake,
 	deliveryArea,
+	location,
 	product,
+	schoolShift,
 	setting,
+	stockBalance,
+	stockLot,
+	supplier,
 	user
 } from '$lib/server/db/schema';
+import { defaultPlace, places } from '$lib/server/services/inventory/ledger';
 import { invalidate } from '$lib/server/cache';
 import type { Actor } from '$lib/server/services/payments/payable';
 
 /** Every table the app writes, children before parents is not needed: FK checks are off meanwhile. */
 const TABLES = [
 	'audit_log',
+	'pos_payment',
 	'stock_movement',
+	'stock_balance',
+	'stock_count_line',
+	'stock_count',
+	'stock_document_line',
+	'stock_document',
+	'stock_lot',
+	'requisition_line',
+	'requisition',
+	'purchase_order_line',
+	'purchase_order',
+	'pos_shift',
+	'reorder_rule',
+	'number_sequence',
 	'payment',
 	'order_item',
 	'orders',
@@ -36,6 +56,7 @@ const TABLES = [
 	'course_intake',
 	'course_image',
 	'course',
+	'school_shift',
 	'product_image',
 	'package_image',
 	'decor_package',
@@ -44,6 +65,8 @@ const TABLES = [
 	'event_type',
 	'product',
 	'category',
+	'supplier',
+	'location',
 	'customer',
 	'delivery_area',
 	'bank_account',
@@ -86,7 +109,7 @@ export async function resetDb() {
 	} finally {
 		connection.release();
 	}
-	for (const tag of ['settings', 'catalog', 'public-images']) invalidate(tag);
+	for (const tag of ['settings', 'catalog', 'public-images', 'locations']) invalidate(tag);
 }
 
 /** A staff member doing something, for services that record who did it. */
@@ -118,11 +141,16 @@ export async function makeCategory(overrides: Partial<typeof category.$inferInse
 	return row.id;
 }
 
-/** A published, active gift with stock, unless told otherwise. */
-export async function makeProduct(overrides: Partial<typeof product.$inferInsert> = {}) {
+/**
+ * A published, active gift with stock, unless told otherwise. The stock sits on the shop floor
+ * (`where` puts it on another location), so the balances add up to `stockQty` like the real thing.
+ */
+export async function makeProduct(
+	overrides: Partial<typeof product.$inferInsert> & { where?: number } = {}
+) {
 	const n = next();
-	const categoryId =
-		overrides.categoryId ?? (await makeCategory({ kind: overrides.kind ?? 'gift' }));
+	const { where, ...values } = overrides;
+	const categoryId = values.categoryId ?? (await makeCategory({ kind: values.kind ?? 'gift' }));
 	const [row] = await db
 		.insert(product)
 		.values({
@@ -133,9 +161,16 @@ export async function makeProduct(overrides: Partial<typeof product.$inferInsert
 			price: 100,
 			stockQty: 10,
 			publishedAt: new Date(Date.now() - 60_000),
-			...overrides
+			...values
 		})
 		.$returningId();
+	const qty = values.stockQty ?? 10;
+	if (qty > 0) {
+		const locationId = where ?? defaultPlace(await db.transaction((tx) => places(tx))).id;
+		await db
+			.insert(stockBalance)
+			.values({ locationId, productId: row.id, lotKey: 0, quantity: qty });
+	}
 	invalidate('catalog');
 	return row.id;
 }
@@ -174,6 +209,59 @@ export async function setSettings(values: Record<string, string | number | boole
 			.onDuplicateKeyUpdate({ set: { value: String(value) } });
 	}
 	invalidate('settings');
+}
+
+/** A place stock can sit. The first one made is the shop floor's neighbour, in `sortOrder`. */
+export async function makeLocation(
+	overrides: Partial<typeof location.$inferInsert> = {}
+): Promise<number> {
+	const n = next();
+	const [row] = await db
+		.insert(location)
+		.values({ name: `Location ${n}`, kind: 'storage', sortOrder: n, ...overrides })
+		.$returningId();
+	return row.id;
+}
+
+export async function makeSupplier(overrides: Partial<typeof supplier.$inferInsert> = {}) {
+	const n = next();
+	const [row] = await db
+		.insert(supplier)
+		.values({ name: `Supplier ${n}`, phone: '0911000000', ...overrides })
+		.$returningId();
+	return row.id;
+}
+
+/** A lot of a product, `expiresInDays` from today (negative: already expired). */
+export async function makeLot(
+	productId: number,
+	overrides: Partial<typeof stockLot.$inferInsert> & { expiresInDays?: number } = {}
+) {
+	const n = next();
+	const { expiresInDays, ...values } = overrides;
+	const [row] = await db
+		.insert(stockLot)
+		.values({
+			productId,
+			lotNumber: `LOT-${n}`,
+			expiryDate: expiresInDays === undefined ? null : dayFromNow(expiresInDays),
+			...values
+		})
+		.$returningId();
+	return row.id;
+}
+
+/** What one location holds of a product (all lots), read fresh. */
+export async function balanceOf(productId: number, locationId: number, lotId?: number | null) {
+	const [row] = await db
+		.select({ qty: sql<number>`COALESCE(SUM(${stockBalance.quantity}), 0)` })
+		.from(stockBalance)
+		.where(
+			sql`${stockBalance.productId} = ${productId} AND ${stockBalance.locationId} = ${locationId}${
+				lotId === undefined ? sql`` : sql` AND ${stockBalance.lotKey} = ${lotId ?? 0}`
+			}`
+		);
+	return Number(row.qty);
 }
 
 /** The current stock of a product, read fresh. */
@@ -222,5 +310,15 @@ export async function makeIntake(
 		.values({ courseId, startDate: dayFromNow(7), seatLimit: 3, ...overrides })
 		.$returningId();
 	invalidate('catalog');
+	return row.id;
+}
+
+/** A shift classes can run in, in use unless told otherwise. */
+export async function makeShift(overrides: Partial<typeof schoolShift.$inferInsert> = {}) {
+	const n = next();
+	const [row] = await db
+		.insert(schoolShift)
+		.values({ name: `Shift ${n}`, sortOrder: n, ...overrides })
+		.$returningId();
 	return row.id;
 }

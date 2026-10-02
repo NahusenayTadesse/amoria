@@ -17,6 +17,18 @@
 			required: false
 		},
 		{
+			name: 'durationDays',
+			label: 'Days one class lasts (left empty: 20)',
+			type: 'number',
+			required: false
+		},
+		{
+			name: 'maxStudents',
+			label: 'Max students per class (suggested for new classes)',
+			type: 'number',
+			required: false
+		},
+		{
 			name: 'titleAm',
 			label: 'Course name (Amharic)',
 			type: 'text',
@@ -77,7 +89,7 @@
 	<PageHeader
 		title="Courses"
 		tabTitle="Courses | Amoria"
-		description="The décor school's courses. Dates and seats belong to intakes and photos to the course itself: open a course to manage them. Students are under &quot;Students&quot;."
+		description="The décor school's courses. Each course runs in classes: a date range and a shift, each with its own limit on students. Open a course to plan its classes and add photos. Students are under &quot;Students&quot;, and the times of day under &quot;Shifts&quot;."
 	/>
 	<LookupPage
 		{data}

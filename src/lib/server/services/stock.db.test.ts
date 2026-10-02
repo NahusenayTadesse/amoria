@@ -132,7 +132,14 @@ describe('adjustStock', () => {
 
 describe('the reason table', () => {
 	it('offers staff only reasons they may record, each with a direction', () => {
-		expect(MANUAL_REASONS).toEqual(['delivery', 'opening', 'damage', 'loss', 'adjustment']);
+		expect(MANUAL_REASONS).toEqual([
+			'delivery',
+			'opening',
+			'damage',
+			'loss',
+			'expiry',
+			'adjustment'
+		]);
 		for (const reason of MANUAL_REASONS) {
 			expect(['in', 'out', 'either']).toContain(STOCK_REASON_META[reason].direction);
 		}

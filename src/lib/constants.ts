@@ -10,7 +10,12 @@ export const LOCALES = ['en', 'am'] as const;
 /** `user.role`. What kind of account it is; *what staff may do* comes from `roleId` (§4.4). */
 export const USER_ROLES = ['customer', 'staff', 'admin'] as const;
 
-export const PRODUCT_KINDS = ['gift', 'rental'] as const;
+/**
+ * What a product is. `material` is stock the company uses rather than sells online: décor
+ * materials, school supplies, packaging. It is counted, bought and issued like the rest and is
+ * never shown on the storefront.
+ */
+export const PRODUCT_KINDS = ['gift', 'rental', 'material'] as const;
 
 export const STOCK_REASONS = [
 	'sale',
@@ -18,9 +23,73 @@ export const STOCK_REASONS = [
 	'delivery',
 	'damage',
 	'loss',
+	'expiry',
 	'adjustment',
-	'opening'
+	'opening',
+	'transfer_in',
+	'transfer_out',
+	'issue',
+	'customer_return',
+	'supplier_return',
+	'pos_sale'
 ] as const;
+
+/** Where stock physically sits. `quarantine` stock is held back: it is not for sale or issue. */
+export const LOCATION_KINDS = ['shop', 'storage', 'workshop', 'quarantine'] as const;
+
+export const LOT_STATUSES = ['available', 'quarantine', 'recalled'] as const;
+
+export const DOCUMENT_TYPES = [
+	'receipt',
+	'issue',
+	'transfer',
+	'adjustment',
+	'sales_return',
+	'purchase_return'
+] as const;
+export type DocumentType = (typeof DOCUMENT_TYPES)[number];
+
+export const DOCUMENT_STATUSES = ['draft', 'posted', 'cancelled'] as const;
+
+/** Why an adjustment document was made. */
+export const ADJUSTMENT_REASONS = [
+	'count',
+	'damage',
+	'expiry',
+	'found',
+	'opening',
+	'other'
+] as const;
+
+export const TAX_CODES = ['standard', 'zero', 'exempt'] as const;
+
+export const PO_STATUSES = [
+	'draft',
+	'ordered',
+	'partially_received',
+	'received',
+	'closed',
+	'cancelled'
+] as const;
+
+export const COUNT_STATUSES = ['open', 'posted', 'cancelled'] as const;
+
+export const REQUISITION_STATUSES = [
+	'draft',
+	'submitted',
+	'approved',
+	'rejected',
+	'issued',
+	'cancelled'
+] as const;
+
+/** What a requisition is for, so stock used on jobs can be reported by business. */
+export const REQUISITION_PURPOSES = ['decor', 'school', 'shop', 'rental', 'other'] as const;
+
+export const SHIFT_STATUSES = ['open', 'closed'] as const;
+
+/** How a walk-in customer paid at the till. */
+export const POS_METHODS = ['cash', 'telebirr', 'cbe_birr', 'bank_transfer', 'card'] as const;
 
 export const FULFILMENTS = ['pickup', 'delivery'] as const;
 
@@ -96,3 +165,6 @@ export const PAYMENT_STATUSES = ['initiated', 'success', 'failed', 'cancelled'] 
 export const MESSAGE_CHANNELS = ['sms', 'email', 'telegram'] as const;
 
 export const MESSAGE_STATUSES = ['queued', 'sending', 'sent', 'failed'] as const;
+
+/** What a spreadsheet import can bring in (`services/inventory/importer`). */
+export const IMPORT_KIND_NAMES = ['products', 'suppliers', 'opening'] as const;

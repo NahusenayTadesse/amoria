@@ -76,7 +76,9 @@ describe('other catalog forms', () => {
 			holdMinutes: 30,
 			freeDeliveryThreshold: 3000,
 			freeDeliverySuggestAt: 2000,
-			lowStockDefault: 3
+			lowStockDefault: 3,
+			expiryWarningDays: 30,
+			vatRate: 15
 		};
 		expect(shopSettingsSchema.safeParse(base).success).toBe(true);
 		expect(shopSettingsSchema.safeParse({ ...base, holdMinutes: 2 }).success).toBe(false);

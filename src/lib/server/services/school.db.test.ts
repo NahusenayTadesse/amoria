@@ -10,12 +10,16 @@ import {
 	makeBankAccount,
 	makeCourse,
 	makeIntake,
+	makeShift,
 	makeStaff,
 	resetDb,
 	setSettings
 } from '$lib/server/testing/db';
 import { recordManualPayment, submitTransfer } from './payments';
 import {
+	certificateFor,
+	classCourseSlug,
+	createClasses,
 	expireRegistrations,
 	joinableIntake,
 	register,
@@ -23,8 +27,11 @@ import {
 	registrationPayable,
 	schoolCourse,
 	schoolCourses,
-	setRegistrationStatus
+	setRegistrationStatus,
+	setResult
 } from './school';
+import { courseIntake } from '$lib/server/db/schema';
+import { planRuns, upcomingRanges } from '$lib/schoolPlan';
 
 beforeEach(resetDb);
 
@@ -315,5 +322,129 @@ describe('public reads', () => {
 		expect(found?.courseTitle).toBe('Balloon garlands');
 		expect(found?.registration.contactName).toBe('Student 1');
 		expect(await registrationByToken('x'.repeat(22))).toBeNull();
+	});
+});
+
+describe('classes and shifts', () => {
+	it('creates one class per run and shift, and skips ones that already exist', async () => {
+		const courseId = await makeCourse();
+		const morning = await makeShift({ name: 'Morning' });
+		const afternoon = await makeShift({ name: 'Afternoon' });
+		const runs = planRuns(dayFromNow(10), dayFromNow(10 + 39), 20);
+		expect(runs).toHaveLength(2);
+		const planned = runs.flatMap((run) =>
+			[morning, afternoon].map((shiftId) => ({ ...run, shiftId, seatLimit: 12 }))
+		);
+
+		const staff = await makeStaff();
+		expect(await createClasses(courseId, planned, actorFor(staff))).toEqual({
+			created: 4,
+			skipped: 0
+		});
+		// The same plan again doubles nothing.
+		expect(await createClasses(courseId, planned, actorFor(staff))).toEqual({
+			created: 0,
+			skipped: 4
+		});
+
+		const rows = await db.select().from(courseIntake).where(eq(courseIntake.courseId, courseId));
+		expect(rows).toHaveLength(4);
+		expect(rows.every((r) => r.seatLimit === 12 && r.status === 'open')).toBe(true);
+		const audits = await db.select().from(auditLog).where(eq(auditLog.tableName, 'course_intake'));
+		expect(audits).toHaveLength(4);
+	});
+
+	it('refuses a shift that is no longer in use', async () => {
+		const courseId = await makeCourse();
+		const retired = await makeShift({ status: false });
+		const [run] = planRuns(dayFromNow(10), dayFromNow(40), 20);
+		await expect(
+			createClasses(courseId, [{ ...run, shiftId: retired, seatLimit: 5 }], actorFor(null))
+		).rejects.toBeInstanceOf(WriteRefused);
+	});
+
+	it('lets a student take the afternoon when the morning is full', async () => {
+		const courseId = await makeCourse({ slug: 'arches' });
+		const start = dayFromNow(10);
+		const morning = await makeIntake(courseId, {
+			startDate: start,
+			shiftId: await makeShift({ name: 'Morning', sortOrder: 1 }),
+			seatLimit: 1
+		});
+		const afternoon = await makeIntake(courseId, {
+			startDate: start,
+			shiftId: await makeShift({ name: 'Afternoon', sortOrder: 2 }),
+			seatLimit: 2
+		});
+
+		await enrol(morning, 1);
+		await expect(enrol(morning, 2)).rejects.toThrow(WriteRefused);
+		await enrol(afternoon, 2);
+
+		const detail = await schoolCourse('arches');
+		const [range] = upcomingRanges(detail!.intakes);
+		expect(range.classes.map((c) => [c.shiftName, c.seatsLeft])).toEqual([
+			['Morning', 0],
+			['Afternoon', 1]
+		]);
+		expect(range.seatsLeft).toBe(1);
+		expect(await classCourseSlug(afternoon)).toBe('arches');
+	});
+});
+
+describe('results and certificates', () => {
+	async function finishedStudent() {
+		const courseId = await makeCourse({ title: 'Table settings' });
+		const intakeId = await makeIntake(courseId, {
+			startDate: dayFromNow(7),
+			endDate: dayFromNow(26)
+		});
+		const { id } = await enrol(intakeId);
+		await pay(id);
+		// The class has since run its course.
+		await db
+			.update(courseIntake)
+			.set({ startDate: dayFromNow(-20), endDate: dayFromNow(-1) })
+			.where(eq(courseIntake.id, intakeId));
+		return { id, intakeId };
+	}
+
+	it('issues a certificate on graduating, and keeps its number if withdrawn and reissued', async () => {
+		const { id } = await finishedStudent();
+		const staff = actorFor(await makeStaff());
+
+		await setResult(id, 'graduated', staff);
+		const cert = await certificateFor({ id });
+		expect(cert).toMatchObject({
+			name: 'Student 1',
+			courseTitle: 'Table settings',
+			certificateNo: `AM-C-${String(id).padStart(6, '0')}`
+		});
+
+		await setResult(id, 'not_graduated', staff);
+		expect(await certificateFor({ id })).toBeNull();
+
+		await setResult(id, 'graduated', staff);
+		expect((await certificateFor({ id }))?.certificateNo).toBe(cert!.certificateNo);
+	});
+
+	it('finds the certificate by the registration link', async () => {
+		const { id } = await finishedStudent();
+		await setResult(id, 'graduated', actorFor(null));
+		const [row] = await db
+			.select({ token: registration.publicToken })
+			.from(registration)
+			.where(eq(registration.id, id));
+		expect((await certificateFor({ token: row.token }))?.certificateNo).toMatch(/^AM-C-/);
+	});
+
+	it('refuses a result before the last day, or for an unpaid student', async () => {
+		const intakeId = await makeIntake(await makeCourse());
+		const { id: unpaid } = await enrol(intakeId, 1);
+		await expect(setResult(unpaid, 'graduated', actorFor(null))).rejects.toThrow(/confirmed/);
+
+		const { id: early } = await enrol(intakeId, 2);
+		await pay(early);
+		await expect(setResult(early, 'graduated', actorFor(null))).rejects.toThrow(/last day/);
 	});
 });

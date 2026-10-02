@@ -1,5 +1,5 @@
 import { error } from '@sveltejs/kit';
-import { and, desc, eq, sql } from 'drizzle-orm';
+import { and, asc, desc, eq, sql } from 'drizzle-orm';
 import { message, superValidate } from 'sveltekit-superforms';
 import { zod4 } from 'sveltekit-superforms/adapters';
 import { childCrud, WriteRefused } from '@nahu/admin-kit/server/childCrud';
@@ -7,13 +7,19 @@ import { hasPermission, requirePermission } from '@nahu/admin-kit/server/permiss
 import { db } from '$lib/server/db';
 import {
 	category,
+	location,
 	orderItem,
 	orders,
 	product,
 	productImage,
+	stockBalance,
+	stockLot,
 	stockMovement,
+	supplier,
 	user
 } from '$lib/server/db/schema';
+import { locationOptions } from '$lib/server/options';
+import { actorOf } from '$lib/server/paymentAdmin';
 import { adjustStock } from '$lib/server/services/stock';
 import { getSettings } from '$lib/server/services/settings';
 import { invalidate } from '$lib/server/cache';
@@ -48,7 +54,7 @@ export const load = async ({ params, locals }) => {
 		.where(eq(product.id, id));
 	if (!row) error(404, 'Product not found');
 
-	const [imagePage, movements, [held], settings] = await Promise.all([
+	const [imagePage, movements, [held], settings, balances, locations, [main]] = await Promise.all([
 		images.load(id),
 		db
 			.select({
@@ -59,9 +65,14 @@ export const load = async ({ params, locals }) => {
 				refId: stockMovement.refId,
 				note: stockMovement.note,
 				createdAt: stockMovement.createdAt,
+				location: location.name,
+				lot: stockLot.lotNumber,
+				unitCost: stockMovement.unitCost,
 				by: user.name
 			})
 			.from(stockMovement)
+			.innerJoin(location, eq(location.id, stockMovement.locationId))
+			.leftJoin(stockLot, eq(stockLot.id, stockMovement.lotId))
 			.leftJoin(user, eq(user.id, stockMovement.createdBy))
 			.where(eq(stockMovement.productId, id))
 			.orderBy(desc(stockMovement.id))
@@ -72,13 +83,38 @@ export const load = async ({ params, locals }) => {
 			.from(orderItem)
 			.innerJoin(orders, eq(orders.id, orderItem.orderId))
 			.where(and(eq(orderItem.productId, id), eq(orders.status, 'pending_payment'))),
-		getSettings()
+		getSettings(),
+		// Where every unit is: by location, and by lot where the product has them.
+		db
+			.select({
+				location: location.name,
+				kind: location.kind,
+				lot: stockLot.lotNumber,
+				expiryDate: stockLot.expiryDate,
+				lotStatus: stockLot.status,
+				quantity: stockBalance.quantity
+			})
+			.from(stockBalance)
+			.innerJoin(location, eq(location.id, stockBalance.locationId))
+			.leftJoin(stockLot, eq(stockLot.id, stockBalance.lotId))
+			.where(and(eq(stockBalance.productId, id), sql`${stockBalance.quantity} <> 0`))
+			.orderBy(asc(location.sortOrder), asc(stockLot.expiryDate)),
+		locationOptions({ withQuarantine: true }),
+		row.product.mainSupplierId
+			? db
+					.select({ name: supplier.name })
+					.from(supplier)
+					.where(eq(supplier.id, row.product.mainSupplierId))
+			: Promise.resolve([{ name: null }])
 	]);
 
 	return {
 		product: row.product,
 		categoryName: row.categoryName,
 		heldForUnpaid: Number(held?.qty ?? 0),
+		balances,
+		locations,
+		mainSupplier: main?.name ?? null,
 		lowStockAt: row.product.lowStockThreshold ?? settings.lowStockDefault,
 		images: imagePage,
 		movements,
@@ -117,17 +153,14 @@ export const actions = {
 		if (!form.valid)
 			return message(form, { type: 'error', text: 'Check the quantity.' }, { status: 400 });
 
-		const { mode, reason, qty, counted, note } = form.data;
+		const { mode, reason, qty, counted, note, locationId } = form.data;
 		try {
 			await adjustStock(
 				productId(event.params),
 				mode === 'count'
-					? { mode: 'count', counted, note: note || null }
-					: { mode: 'move', reason: reason as StockReason, qty, note: note || null },
-				{
-					locals: { user: event.locals.user ? { id: event.locals.user.id } : null },
-					getClientAddress: event.getClientAddress
-				}
+					? { mode: 'count', counted, note: note || null, locationId }
+					: { mode: 'move', reason: reason as StockReason, qty, note: note || null, locationId },
+				actorOf(event)
 			);
 		} catch (err) {
 			if (err instanceof WriteRefused) {

@@ -16,6 +16,9 @@ export type StudentRow = {
 	status: RegistrationStatus;
 	courseTitle: string;
 	startDate: string;
+	shiftName: string | null;
+	result: 'pending' | 'graduated' | 'not_graduated';
+	certificateNo: string | null;
 	receiptWaiting: boolean;
 };
 
@@ -44,7 +47,17 @@ export const columns: ColumnDef<StudentRow>[] = [
 		accessorKey: 'courseTitle',
 		header: 'Course',
 		cell: ({ row }) =>
-			`${row.original.courseTitle}, from ${ethiopianDate(new Date(`${row.original.startDate}T12:00:00+03:00`))}`
+			`${row.original.courseTitle}, from ${ethiopianDate(new Date(`${row.original.startDate}T12:00:00+03:00`))}${row.original.shiftName ? `, ${row.original.shiftName}` : ''}`
+	},
+	{
+		accessorKey: 'result',
+		header: 'Result',
+		cell: ({ row }) =>
+			row.original.result === 'graduated'
+				? `Graduated, ${row.original.certificateNo ?? ''}`
+				: row.original.result === 'not_graduated'
+					? 'Did not graduate'
+					: ''
 	},
 	{ accessorKey: 'fee', header: 'Fee', cell: ({ row }) => formatETB(row.original.fee) },
 	{

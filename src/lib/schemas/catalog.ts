@@ -1,5 +1,5 @@
 import { z } from 'zod/v4';
-import { PRODUCT_KINDS } from '$lib/constants';
+import { PRODUCT_KINDS, TAX_CODES } from '$lib/constants';
 
 /** Catalog and shop-settings forms for the dashboard. Shared by the page and the action. */
 
@@ -16,6 +16,12 @@ const optionalNumber = <S extends z.ZodType>(schema: S) =>
 		(v) => (v === '' || v === null || v === undefined ? undefined : v),
 		schema.optional()
 	);
+
+/** A picker left on "none" posts an empty string or 0. */
+const optionalId = z.preprocess(
+	(v) => (v === '' || v === null || v === undefined || v === '0' || v === 0 ? undefined : v),
+	z.coerce.number().int().positive().optional()
+);
 
 const slug = z.preprocess(
 	(v) => (v === null || v === undefined ? '' : v),
@@ -38,6 +44,17 @@ const product = z.object({
 	deposit: z.coerce.number().min(0).default(0),
 	minRentalDays: z.coerce.number().int().min(1).default(1),
 	lowStockThreshold: optionalNumber(z.coerce.number().int().min(0)),
+	/** The company's own code and what the scanner reads; unique when given (checked on the server). */
+	sku: optionalText(40),
+	barcode: optionalText(40),
+	/** What one unit is counted in: pcs, box, m, kg. */
+	unit: z.preprocess(
+		(v) => (v === null || v === undefined || v === '' ? 'pcs' : v),
+		z.string().trim().min(1).max(20)
+	),
+	trackLots: z.boolean().default(false),
+	mainSupplierId: optionalId,
+	taxCode: z.enum(TAX_CODES).default('standard'),
 	isFeatured: z.boolean().default(false),
 	/** Shown on the storefront. Stored as `publishedAt`, set the first time it is ticked. */
 	published: z.boolean().default(true),
@@ -105,6 +122,11 @@ export const shopSettingsSchema = z.object({
 	freeDeliveryThreshold: z.coerce.number().min(0),
 	freeDeliverySuggestAt: z.coerce.number().min(0),
 	lowStockDefault: z.coerce.number().int().min(0),
+	expiryWarningDays: z.coerce.number().int().min(0).max(365),
+	vatRegistered: z.boolean().default(false),
+	vatRate: z.coerce.number().min(0).max(100),
+	pricesIncludeVat: z.boolean().default(true),
+	receiptFooter: z.string().trim().max(160).default(''),
 	businessPhone: optionalText(30),
 	whatsappNumber: optionalText(30),
 	telegramUsername: optionalText(60),

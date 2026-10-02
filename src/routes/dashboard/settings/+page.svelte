@@ -71,6 +71,58 @@
 			</label>
 		</FormCard>
 
+		<FormCard
+			title="Stock and tax"
+			description="Expiry warnings, and VAT on till sales. Leave VAT off until the shop is registered."
+		>
+			<div class="grid gap-4 sm:grid-cols-2">
+				<InputComp
+					{form}
+					{errors}
+					name="expiryWarningDays"
+					type="number"
+					min="0"
+					label="Warn about expiry (days ahead)"
+					description="Lots that expire within this many days are flagged."
+				/>
+				<InputComp
+					{form}
+					{errors}
+					name="vatRate"
+					type="number"
+					min="0"
+					step="0.01"
+					label="VAT rate (%)"
+					description="Applied to standard-rated products."
+				/>
+				<InputComp
+					{form}
+					{errors}
+					name="receiptFooter"
+					label="Till receipt footer"
+					description="Printed under every till receipt."
+				/>
+			</div>
+			<label class="flex items-center gap-2 text-sm">
+				<input
+					type="checkbox"
+					name="vatRegistered"
+					bind:checked={$form.vatRegistered}
+					class="size-4 accent-primary"
+				/>
+				The shop is registered for VAT
+			</label>
+			<label class="flex items-center gap-2 text-sm">
+				<input
+					type="checkbox"
+					name="pricesIncludeVat"
+					bind:checked={$form.pricesIncludeVat}
+					class="size-4 accent-primary"
+				/>
+				Shelf prices already include VAT
+			</label>
+		</FormCard>
+
 		<FormCard title="Contact" description="Shown to customers.">
 			<div class="grid gap-4 sm:grid-cols-2">
 				<InputComp {form} {errors} name="businessPhone" type="tel" label="Shop phone" />

@@ -12,6 +12,16 @@ import { sql } from 'drizzle-orm';
 export const birr = (name: string) => decimal(name, { precision: 12, scale: 2, mode: 'number' });
 
 /**
+ * What one unit of stock cost, `decimal(12,4)` read as a number. Four places, not two: a pack of 12
+ * bought for ETB 100 costs 8.3333 a unit, and rounding that early makes valuations drift.
+ */
+export const unitCost = (name: string) =>
+	decimal(name, { precision: 12, scale: 4, mode: 'number' });
+
+/** A tax rate in percent, e.g. `15.00`. */
+export const percent = (name: string) => decimal(name, { precision: 5, scale: 2, mode: 'number' });
+
+/**
  * JSON kept in a LONGTEXT column, for opaque values only — never queried into (§3.1).
  *
  * MariaDB's own `JSON` type is LONGTEXT plus a `CHECK (json_valid(...))`, and drizzle-kit cannot

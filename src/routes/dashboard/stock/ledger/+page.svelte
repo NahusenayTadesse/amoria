@@ -4,6 +4,7 @@
 	import DataTable from '@nahu/admin-kit/components/Table/data-table.svelte';
 	import DataTableLinks from '@nahu/admin-kit/components/Table/data-table-links.svelte';
 	import { ethiopianDateTime } from '@nahu/admin-kit/tableCells';
+	import { formatETB } from '@nahu/admin-kit/global';
 	import { STOCK_REASON_META, STOCK_REF_LINKS } from '$lib/stock';
 	import StockTabs from '../StockTabs.svelte';
 
@@ -34,10 +35,25 @@
 			cell: ({ row }) => STOCK_REASON_META[row.original.reason]?.label ?? row.original.reason
 		},
 		{
+			id: 'where',
+			header: 'Where',
+			cell: ({ row }) =>
+				row.original.lot
+					? `${row.original.location}, lot ${row.original.lot}`
+					: row.original.location
+		},
+		{
 			accessorKey: 'delta',
 			header: 'Change',
+			meta: { align: 'right' },
 			cell: ({ row }) =>
 				row.original.delta > 0 ? `+${row.original.delta}` : String(row.original.delta)
+		},
+		{
+			accessorKey: 'unitCost',
+			header: 'Valued at',
+			meta: { align: 'right' },
+			cell: ({ row }) => formatETB(row.original.unitCost)
 		},
 		{
 			id: 'source',

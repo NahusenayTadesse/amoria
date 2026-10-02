@@ -1,4 +1,5 @@
 <script lang="ts">
+	import Award from '@lucide/svelte/icons/award';
 	import CalendarDays from '@lucide/svelte/icons/calendar-days';
 	import GraduationCap from '@lucide/svelte/icons/graduation-cap';
 	import { resolve } from '$app/paths';
@@ -103,6 +104,21 @@
 		</div>
 	{/if}
 
+	{#if reg.graduated}
+		<a
+			href={resolve(localizeHref(`/reg/${data.token}/certificate`) as AppPath)}
+			class="mt-6 flex items-center gap-4 rounded-[1.5rem] border border-[#b8862b]/50 bg-[#fbf3e1] p-5 text-[#5a3d0a] transition-transform duration-300 hover:-translate-y-0.5"
+		>
+			<span class="grid h-12 w-12 shrink-0 place-items-center rounded-full bg-[#b8862b] text-white">
+				<Award class="h-6 w-6" aria-hidden="true" />
+			</span>
+			<span>
+				<span class="block font-semibold">{m.reg_certificate_ready()}</span>
+				<span class="text-sm underline">{m.reg_certificate_view()}</span>
+			</span>
+		</a>
+	{/if}
+
 	<div class="mt-6 rounded-[1.5rem] border border-border bg-card p-5 text-sm">
 		<p class="text-xs font-semibold tracking-[0.18em] text-[var(--am-foil)] uppercase">
 			{m.reg_course()}
@@ -117,6 +133,19 @@
 			<CalendarDays class="mt-0.5 h-4 w-4 shrink-0 text-[var(--am-ribbon)]" aria-hidden="true" />
 			<span>
 				{m.reg_starts({ date: bothCalendarsOnDay(data.course.startDate) })}
+				{#if data.course.endDate}
+					<span class="block text-muted-foreground"
+						>{m.school_ends()}: {bothCalendarsOnDay(data.course.endDate)}</span
+					>
+				{/if}
+				{#if data.course.shiftName}
+					<span class="block text-muted-foreground"
+						>{m.reg_shift()}: {localized(
+							{ name: data.course.shiftName, nameAm: data.course.shiftNameAm },
+							'name'
+						)}{data.course.shiftTime ? `, ${data.course.shiftTime}` : ''}</span
+					>
+				{/if}
 				{#if data.course.scheduleText}
 					<span class="block text-muted-foreground">{data.course.scheduleText}</span>
 				{/if}

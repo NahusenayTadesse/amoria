@@ -205,7 +205,7 @@ Read them only through `$env/dynamic/private`, and list every one in `.env.examp
 ### 4.4 Permissions (dentalClinic model)
 
 - Tables: `roles`, `permissions`, `role_permissions`, `special_permissions` (§5.1).
-- Permission names are constants in `$lib/permissions.ts`, **synced into `permissions` once per boot** (idempotent and additive), the same as dentalClinic's `hooks.server.ts`. Names include `orders.view`, `orders.manage`, `rentals.manage`, `quotes.manage`, `quotes.send`, `school.manage`, `catalog.manage`, `stock.adjust`, `payments.record`, `customers.view`, `reports.view`, `links.manage`, `messages.view`, `settings.manage` and `staff.manage`.
+- Permission names are constants in `$lib/permissions.ts`, **synced into `permissions` once per boot** (idempotent and additive), the same as dentalClinic's `hooks.server.ts`. Names include `orders.view`, `orders.manage`, `rentals.manage`, `quotes.manage`, `quotes.send`, `school.manage`, `catalog.manage`, `payments.record`, `customers.view`, `links.manage`, `messages.view`, `settings.manage` and `staff.manage`. The inventory modules add `stock.view`, `stock.adjust`, `stock.count`, `purchasing.manage`, `requisitions.request`, `requisitions.approve`, `pos.sell`, `pos.discount`, `reports.view` and `data.import` (§5.11).
 - Every dashboard route gets an `access.ts` rule and a `navigation.ts` entry. Every action beyond the page's own gate calls `requirePermission` (or passes `permission` to `childCrud`). Every delete calls `requireSuperAdmin`.
 
 ---
@@ -267,24 +267,29 @@ Guest checkout upserts by phone but never overwrites a linked customer's name or
 
 **`product`** holds gifts and rental equipment in one stock list (`contentCrud` with `references: [category]`).
 
-| Column                         | Type                  | Notes                                                                                                                      |
-| ------------------------------ | --------------------- | -------------------------------------------------------------------------------------------------------------------------- |
-| `id`                           | int PK                |                                                                                                                            |
-| `kind`                         | enum `gift`, `rental` |                                                                                                                            |
-| `categoryId`                   | FK → category         |                                                                                                                            |
-| `slug`                         | varchar(160)          | unique (`uniqueField`)                                                                                                     |
-| `name`, `nameAm`               | varchar(160)          |                                                                                                                            |
-| `description`, `descriptionAm` | text                  |                                                                                                                            |
-| `price`                        | decimal               | gift sale price (null for rental)                                                                                          |
-| `dailyRate`                    | decimal               | rental (null for gift)                                                                                                     |
-| `deposit`                      | decimal               | rental security deposit, default 0 **[Decision]**                                                                          |
-| `minRentalDays`                | int                   | default 1                                                                                                                  |
-| `stockQty`                     | int                   | gift: units on hand. Rental: units owned. **Written only by `stock.ts`, never by the CRUD form** (strip it in `transform`) |
-| `lowStockThreshold`            | int                   |                                                                                                                            |
-| `isFeatured`                   | bool                  |                                                                                                                            |
-| `publishedAt`                  | datetime              | null means hidden; recent means "new arrival"                                                                              |
-| `sortOrder`                    | int                   |                                                                                                                            |
-| `...secureFields`              |                       | `isActive` is the on/off switch                                                                                            |
+| Column                         | Type                  | Notes                                                                                                                                                                                                                      |
+| ------------------------------ | --------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `id`                           | int PK                |                                                                                                                                                                                                                            |
+| `kind`                         | enum `gift`, `rental` |                                                                                                                                                                                                                            |
+| `categoryId`                   | FK → category         |                                                                                                                                                                                                                            |
+| `slug`                         | varchar(160)          | unique (`uniqueField`)                                                                                                                                                                                                     |
+| `name`, `nameAm`               | varchar(160)          |                                                                                                                                                                                                                            |
+| `description`, `descriptionAm` | text                  |                                                                                                                                                                                                                            |
+| `price`                        | decimal               | gift sale price (null for rental)                                                                                                                                                                                          |
+| `dailyRate`                    | decimal               | rental (null for gift)                                                                                                                                                                                                     |
+| `deposit`                      | decimal               | rental security deposit, default 0 **[Decision]**                                                                                                                                                                          |
+| `minRentalDays`                | int                   | default 1                                                                                                                                                                                                                  |
+| `stockQty`                     | int                   | Units that can be sold or issued: the sum of `stock_balance` over every location except quarantine. Rental: units owned. **Written only by `services/inventory/ledger`, never by the CRUD form** (strip it in `transform`) |
+| `sku`, `barcode`               | varchar(40)           | unique when given; the barcode is what the till scans (§5.11)                                                                                                                                                              |
+| `unit`                         | varchar(20)           | what one unit is counted in (`pcs`, `m`, `kg`): a label, quantities are whole numbers                                                                                                                                      |
+| `trackLots`                    | bool                  | delivery asks for a lot number and expiry date                                                                                                                                                                             |
+| `avgCost`                      | decimal(12,4)         | moving-average cost per unit, moved only by deliveries and opening stock                                                                                                                                                   |
+| `mainSupplierId`, `taxCode`    | FK, enum              | default supplier for reorders; `standard` / `zero` / `exempt` for VAT                                                                                                                                                      |
+| `lowStockThreshold`            | int                   |                                                                                                                                                                                                                            |
+| `isFeatured`                   | bool                  |                                                                                                                                                                                                                            |
+| `publishedAt`                  | datetime              | null means hidden; recent means "new arrival"                                                                                                                                                                              |
+| `sortOrder`                    | int                   |                                                                                                                                                                                                                            |
+| `...secureFields`              |                       | `isActive` is the on/off switch                                                                                                                                                                                            |
 
 Indexes: `(kind, categoryId, publishedAt)` and `(isFeatured)`.
 
@@ -296,10 +301,7 @@ Indexes: `(kind, categoryId, publishedAt)` and `(isFeatured)`.
 - Upload through the kit's `FileUpload` (browser compression to ≤1 MB and ≤1920 px, already in the kit)
 - Serve publicly through the **[Kit gap]** public file handler, where `isPublic(name)` checks a cached set of filenames from these four tables. Private files stay on `/dashboard/files`.
 
-**`stock_movement`** is an append-only ledger: `id`, `productId` FK, `delta int`, `reason` enum `sale`/`sale_cancel`/`delivery`/`damage`/`loss`/`adjustment`/`opening`, `refType varchar(20)`, `refId int`, `note`, `createdBy`, `createdAt`. Index `(productId, createdAt)`.
-`stock.move()` writes the movement and updates `product.stockQty` in the same transaction, locking the product row. Rental availability comes from bookings (§5.4); movements change rental stock only when units are bought, damaged or lost.
-
-**Site-wide and extensible.** One ledger for every kind of product (gifts, rental equipment, and whatever comes next). Each reason's meaning — direction, and whether staff may record it by hand — is one entry in `STOCK_REASON_META` (`$lib/stock.ts`); a new _source_ of movements (rentals out and back, décor jobs using materials) calls `stock.move()` with its own `refType` and adds one line to `STOCK_REF_LINKS`. Staff changes go through `stock.adjustStock()`: a reason with a quantity, or a stock count (the difference is recorded as a correction). The dashboard's Stock → Levels and Ledger pages, and each product's page, read the same ledger.
+**Products are everything the company stocks.** `kind` is `gift` (sold, online and at the till), `rental` (equipment) or `material` (décor materials, school supplies, packaging: used, never sold, never on the storefront). One list, one ledger, one set of counts and reports. The full stock design (locations, lots, documents, purchasing, counts, requisitions, till, reports) is §5.11.
 
 ### 5.3 Gift shop orders
 
@@ -381,13 +383,23 @@ The **event calendar** is quotes with status `deposit_paid` or `paid`, by `event
 
 ### 5.6 Décor school
 
-**`course`** (`contentCrud`, `listFields: ['curriculum', 'curriculumAm']`): `id`, `slug`, `title`, `titleAm`, `summary`, `summaryAm`, `curriculum`, `curriculumAm`, `fee` (decimal), `durationText`, `sortOrder`, `...secureFields`.
+The school runs **fixed-length courses in classes**. A class is one course over one date range in one shift, with its own max students. Every student who qualifies at the end gets a certificate.
 
-**`course_intake`** (`childCrud`, owner `courseId`): `id`, `courseId`, `startDate`, `endDate`, `scheduleText`, `seatLimit`, `status` enum `open`/`closed`/`completed`/`cancelled`, `...deletionFields`, timestamps. Index `(courseId, status, startDate)`.
+**`course`** (`contentCrud`, `listFields: ['curriculum', 'curriculumAm']`): `id`, `slug`, `title`, `titleAm`, `summary`, `summaryAm`, `curriculum`, `curriculumAm`, `fee` (decimal), `durationText`, `durationDays int NULL` (days one class lasts, which is also the gap from one class's first day to the next's; `NULL` = `DEFAULT_COURSE_DAYS` = 20), `maxStudents int NULL` (the class size the builder suggests), `sortOrder`, `...secureFields`.
 
-**`registration`**: `id`, `ref`, `publicToken`, `intakeId`, `customerId`, contact snapshot, `feeSnapshot`, `status` enum `pending_payment`/`confirmed`/`cancelled`/`expired`/`paid_unfulfillable` (§7), `holdExpiresAt`, `paidAt`, `result` enum `pending`/`graduated`/`not_graduated` (Phase 2), `resultNotifiedAt`, `sourceId`, timestamps. Index `(intakeId, status)`.
+**`school_shift`** (`contentCrud`, `/dashboard/school/shifts`): `id`, `name` unique, `nameAm`, `timeText` ("8:30 to 12:00"), `sortOrder`, `...lesserFields`. Staff name the shifts (morning, afternoon, night…), so no code change is needed once the school decides. With no shifts, each date range is a single class.
 
-**Seats left** = `seatLimit − confirmed − unexpired pending`, checked with the intake row locked.
+**`course_intake`** = a class (`childCrud`, owner `courseId`): `id`, `courseId`, `startDate`, `endDate` (left empty: `startDate + durationDays − 1`), `shiftId` FK → `school_shift` NULL, `scheduleText` (a note for students), `seatLimit` (max students), `status` enum `open`/`closed`/`completed`/`cancelled`, `...deletionFields`, timestamps. Indexes `(courseId, status, startDate)`, `(shiftId)`. One live class per `(courseId, startDate, shiftId)`, enforced in the service and the form's transform.
+
+**`registration`**: `id`, `ref`, `publicToken`, `intakeId`, `customerId`, contact snapshot, `feeSnapshot`, `status` enum `pending_payment`/`confirmed`/`cancelled`/`expired`/`paid_unfulfillable` (§7), `holdExpiresAt`, `paidAt`, `result` enum `pending`/`graduated`/`not_graduated`, `resultNotifiedAt`, `certificateNo varchar(32)` unique (`AM-C-000123`, from the id, given on first graduation and kept), `certificateIssuedAt` (null while not graduated), `sourceId`, timestamps. Index `(intakeId, status)`.
+
+**Seats left** = `seatLimit − confirmed − unexpired pending`, checked with the class row locked.
+
+**Class builder** (course page, `$lib/schoolPlan`): a date range, days per class (the course's, else 20), max students and the chosen shifts plan back-to-back runs that finish by the end date, one class per run and shift. The plan shows before saving; each class can be left out or resized; existing classes are skipped (`school.createClasses`, one transaction, audited).
+
+**Registration** (`/school/[slug]/register`; `?class=<id>` preselects; old `/school/register/[intakeId]` links redirect there): the next `REGISTER_RANGES` = 4 date ranges with a free place, plus any full ranges before them, each listing its shifts with places left. A class with 0 places is shown but cannot be chosen, so a guest can take the afternoon when the morning is full.
+
+**Results and certificates** (`school.setResult`): only for a confirmed student, from the class's last day. `graduated` issues the certificate; any other result withdraws it. Printable at `/dashboard/school/students/[id]/certificate` and, for the student, `/reg/[token]/certificate` (linked from their registration page).
 
 ### 5.7 Payments
 
@@ -412,6 +424,7 @@ The **event calendar** is quotes with status `deposit_paid` or `paid`, by `event
 
 - Hold and quote timing: `holdMinutes`, `quoteValidDays`, `rentalReminderDays`
 - Money defaults: `depositPercent`, `lowStockDefault`, `deliveryEnabled`, `freeDeliveryThreshold`, `freeDeliverySuggestAt` (per-area fees live in `delivery_area`)
+- Stock and tax: `expiryWarningDays`, `vatRegistered`, `vatRate`, `pricesIncludeVat`, `receiptFooter` (§5.11)
 - Contact details: `businessPhone`, `whatsappNumber`, `telegramUsername`, `businessEmail`, `address`, `mapUrl`
 - Staff alerts: `staffAlertChatId`
 
@@ -420,6 +433,34 @@ The **event calendar** is quotes with status `deposit_paid` or `paid`, by `event
 **`audit_log`**: the kit's columns (`userId`, `action`, `tableName`, `recordId`, `changes`, `ipAddress`, `branchId`, `createdAt`). `branchId` stays null; Amoria has one site.
 
 ---
+
+### 5.11 Inventory: stock, purchasing, requisitions and the till
+
+Ported from the sibling `stock management` project and fitted to Amoria: **one site, no organisation or branch, whole-unit quantities, birr `decimal(12,2)` and costs `decimal(12,4)`, no `cascade`**. Everything below lives in `src/lib/server/services/inventory/`; routes stay thin.
+
+**Not ported** (the stock project has them, Amoria does not need them yet): FIFO costing, landed costs and foreign currency, serial numbers, kits and variants, maker-checker approvals, reservations, fiscal devices, e-invoicing, TOT and customer credit.
+
+**Locations.** `location` (`shop`, `storage`, `workshop`, `quarantine`). Sales take from the shop floor first, then the other places. Quarantine is stock set aside: never sold or issued, and not counted in `product.stockQty`. A location that holds stock cannot be switched off or change kind.
+
+**The ledger** (`ledger.ts`) is the only writer of `stock_balance`, `stock_movement` and `product.stockQty`. `move(tx, { productId, delta, reason, … })` locks the product row, picks the places and lots (first expiry first out; expired, quarantined and recalled lots are never sold), refuses to go below zero and writes the rows, the cached balances and the sellable total together. A cancelled sale returns stock to exactly the location and lot it came from. `stock_movement` carries `locationId`, `lotId`, `unitCost`, `documentId` and the Addis Ababa business day `docDate`; reasons and their direction are `STOCK_REASON_META` (`$lib/stock.ts`).
+
+**Documents** (`documents.ts`, `post.ts`). A `stock_document` is a draft until posted, then never edited: `receipt`, `issue`, `transfer`, `adjustment`, `sales_return`, `purchase_return`. Posting is one transaction, numbers the document per Ethiopian fiscal year (`AM-GRN-2019-00042`) and refuses with a plain sentence (`WriteRefused`). Deliveries need a supplier, and a lot number for products that track lots; expired stock cannot be received; a return cannot exceed what is left of the original. Draft lines are `childCrud` rows (soft-deleted; **purged when the document posts**, so a posted document has none). Never deleted: a dropped draft is `cancelled`.
+
+**Purchasing** (`purchasing.ts`). `purchase_order` (+ lines): draft, placed (numbered), part received, received, closed or cancelled. "Receive delivery" drafts the goods receipt for what is still due; the order's status follows posted receipts. `reorderSuggestions` lists products at or under their level, or that will run out before a delivery could arrive at the last 90 days' use, and `ordersFromReorder` makes one draft order per main supplier.
+
+**Counts** (`counts.ts`). Opening a count snapshots one location; counters enter what they found (a blind count hides the expected quantity from anyone without `stock.adjust`); posting writes every difference as one `count` adjustment. A count line for stock with no lot means the stock with no lot (`exactLot`), never "any lot".
+
+**Requisitions** (`requisitions.ts`). A team asks the store for materials (optionally for a décor job): submit, then someone else approves (quantities may be cut) or rejects with a reason, then the store issues; posting that issue marks it issued.
+
+**Expiry** (`expiry.ts`). Expired and soon-to-expire lots by location (`settings.expiryWarningDays`), one-click drafts to move them into quarantine or write them off, and recall status per lot.
+
+**The till** (`pos.ts`). A shift is opened with a float and closed by counting the drawer; a sale is one transaction (draft, post, payments), split across methods, only cash gives change, no credit. Any price other than the shelf price needs `pos.discount`. VAT is off until `settings.vatRegistered`; then each line's rate is fixed when posted, from the product's tax code, and the document keeps `subtotal`, `vatTotal` and `total`. Refunds go through the same return check as any customer return and come out of the drawer.
+
+**Reports** (`reports.ts`): stock value, movements, usage, write-offs, suppliers and fill rate, sales, slow-moving stock, ABC, stock-outs, a product's level over time, and VAT (output VAT on till sales, input VAT on deliveries from VAT-registered suppliers; **online sales keep no tax record, so their VAT is only an estimate**).
+
+**Import and labels** (`importer.ts`, `barcodes.ts`). Products, suppliers and opening stock from CSV or Excel, checked row by row first; one bad row stops the import. Imported products are unpublished. In-store EAN-13 barcodes (`20` + product id + check digit) and A4 label sheets.
+
+**Not built yet:** staff alerts for low stock and expiring lots, and a morning digest. They need the messaging outbox (§8), which is not in the repo yet; until then the Today board and the Expiry page show them.
 
 ## 6. Server architecture
 
@@ -435,7 +476,9 @@ src/lib/server/
   services/           Business logic that isn't plain CRUD
     customers.ts      upsertGuest, linkToUser, profile
     catalog.ts        cached public reads (products, packages, courses, images)
-    stock.ts          move() — the ONLY writer of stockQty
+    stock.ts          re-exports the ledger's move(), plus adjustStock()
+    inventory/        ledger.ts (the ONLY writer of stock), post.ts, documents.ts, purchasing.ts,
+                      counts.ts, requisitions.ts, expiry.ts, pos.ts, reports.ts, importer.ts, barcodes.ts
     orders.ts         createFromCart, markPaid, expireHolds, transitions
     rentals.ts        availability, book, markPaid, pickUp, markReturned, expireHolds
     quotes.ts         submitRequest, send, view, accept, markPaid, revise
@@ -559,7 +602,7 @@ Public routes are localized by Paraglide (`/…` for English, `/am/…` for Amha
 | `/rent`, `/rent/[category]`, `/rent/book/[slug]`                                  | Rental catalogue and booking (date range, live price, contact, pay)                                                                                     |
 | `/decor`, `/decor/packages/[slug]`, `/decor/portfolio`, `/decor/portfolio/[slug]` |                                                                                                                                                         |
 | `/decor/quote`                                                                    | Quote request (pre-filled from `?package=`)                                                                                                             |
-| `/school`, `/school/[slug]`, `/school/register/[intakeId]`                        | Courses, intakes with seats left, registration                                                                                                          |
+| `/school`, `/school/[slug]`, `/school/[slug]/register`                            | Courses, classes (dates × shift) with places left, registration                                                                                         |
 | `/o/[token]`, `/r/[token]`, `/reg/[token]`                                        | Status pages (pay again if pending)                                                                                                                     |
 | `/q/[token]`                                                                      | Quote page: itemised, accept, pay deposit or balance, no login. `/q/[token]/print` uses `PrintSheet`; `POST /q/[token]/viewed` is the view beacon (§11) |
 | `/pay/return`                                                                     | Verify, then redirect to the status page                                                                                                                |
@@ -584,10 +627,14 @@ Public routes are localized by Paraglide (`/…` for English, `/am/…` for Amha
 | School                     | `contentCrud` courses; `childCrud` intakes; students `data-table`                                                                  | ✅                   | results + notify                |
 | Catalog                    | products `contentCrud` + images `childCrud`; categories `LookupPage`                                                               | ✅                   |                                 |
 | Décor                      | packages and portfolio `contentCrud` + images; event types `LookupPage`                                                            | ✅                   |                                 |
-| Stock                      | levels `data-table`, adjust `FormDialog`, movements `data-table`                                                                   | automatic updates    | full screens                    |
+| Stock                      | levels `data-table`, adjust `FormDialog`, ledger, documents (`childCrud` lines), counts, expiry, locations `LookupPage`            | ✅                   |                                 |
+| Till                       | `Till` (sell), shifts, receipt, customer return                                                                                    | ✅                   |                                 |
+| Purchasing                 | orders, reorder planner, suppliers (`contentCrud`)                                                                                 | ✅                   |                                 |
+| Requisitions               | request, approve or reject, issue                                                                                                  | ✅                   |                                 |
+| Data                       | spreadsheet import, barcode labels                                                                                                 | ✅                   |                                 |
 | Customers                  | `data-table` + detail                                                                                                              | basic                | history                         |
 | Campaign links             | `contentCrud` + `Copy` + click/conversion columns                                                                                  | ✅                   |                                 |
-| Reports                    | `StatCard` + `ReportChart` by period, business and source                                                                          |                      | ✅                              |
+| Reports                    | `StatCard` + `ReportChart` by period: stock, sales and VAT reports                                                                 | ✅ (stock and VAT)   | by business and source          |
 | Messages                   | outbox `data-table`, retry action                                                                                                  | ✅                   |                                 |
 | Settings                   | `FormCard`                                                                                                                         | ✅                   |                                 |
 | Staff and roles            | users + `PasswordGenerator`; roles `LookupPage`; permissions matrix                                                                | ✅                   |                                 |

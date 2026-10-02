@@ -31,6 +31,22 @@ const schema = z.object({
 	freeDeliveryThreshold: z.coerce.number().min(0).catch(3000),
 	/** Above this, the bag says how far the customer is from free delivery. */
 	freeDeliverySuggestAt: z.coerce.number().min(0).catch(2000),
+	/** Lots expiring within this many days are flagged on the expiry page and in the digest. */
+	expiryWarningDays: z.coerce.number().int().min(0).max(365).catch(30),
+	/** Amoria is registered for VAT: the till shows and reports it. Off until the client confirms. */
+	vatRegistered: z
+		.enum(['true', 'false'])
+		.transform((v) => v === 'true')
+		.catch(false),
+	/** Percent, on standard-rated items. */
+	vatRate: z.coerce.number().min(0).max(100).catch(15),
+	/** Shelf prices already contain VAT (the retail norm), so the till adds nothing on top. */
+	pricesIncludeVat: z
+		.enum(['true', 'false'])
+		.transform((v) => v === 'true')
+		.catch(true),
+	/** Printed under the till receipt. */
+	receiptFooter: z.string().catch('Thank you for shopping at Amoria'),
 	businessPhone: z.string().catch(''),
 	whatsappNumber: z.string().catch(''),
 	telegramUsername: z.string().catch(''),

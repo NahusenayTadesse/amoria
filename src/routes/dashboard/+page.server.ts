@@ -3,7 +3,15 @@ import { localDayRange, localToday } from '@nahu/admin-kit/time';
 import { notDeleted } from '@nahu/admin-kit/server/softDelete';
 import { hasPermission } from '@nahu/admin-kit/server/permissions';
 import { db } from '$lib/server/db';
-import { orders, payment, product, registration } from '$lib/server/db/schema';
+import {
+	orders,
+	payment,
+	product,
+	purchaseOrder,
+	registration,
+	requisition
+} from '$lib/server/db/schema';
+import { expiryReport } from '$lib/server/services/inventory/expiry';
 import { getSettings } from '$lib/server/services/settings';
 
 /**
@@ -14,75 +22,102 @@ export const load = async ({ locals }) => {
 	const canOrders = hasPermission(locals, 'orders.view');
 	const canStock = hasPermission(locals, 'stock.view');
 	const canSchool = hasPermission(locals, 'school.manage');
+	const canApprove = hasPermission(locals, 'requisitions.approve');
+	const canBuy = hasPermission(locals, 'purchasing.manage');
 	const { start, end } = localDayRange(localToday());
 	const { lowStockDefault } = await getSettings();
 
-	const [toHandOver, receipts, [paidToday], lowStock, studentReceipts, [noSeat]] =
-		await Promise.all([
-			canOrders
-				? db
-						.select({ status: orders.status, n: count() })
-						.from(orders)
-						.where(inArray(orders.status, ['paid', 'preparing', 'ready', 'paid_unfulfillable']))
-						.groupBy(orders.status)
-				: [],
-			canOrders
-				? db
-						.select({
-							orderId: orders.id,
-							ref: orders.ref,
-							name: orders.contactName,
-							amount: payment.amount,
-							createdAt: payment.createdAt
-						})
-						.from(payment)
-						.innerJoin(orders, eq(orders.id, payment.orderId))
-						.where(and(eq(payment.provider, 'bank_transfer'), eq(payment.status, 'initiated')))
-						.orderBy(asc(payment.id))
-						.limit(10)
-				: [],
-			canOrders
-				? db
-						.select({ n: count(), total: sql<string>`COALESCE(SUM(${orders.total}), 0)` })
-						.from(orders)
-						.where(and(gte(orders.paidAt, start), lt(orders.paidAt, end)))
-				: [{ n: 0, total: '0' }],
-			canStock
-				? db
-						.select({ id: product.id, name: product.name, stockQty: product.stockQty })
-						.from(product)
-						.where(
-							and(
-								notDeleted(product),
-								eq(product.isActive, true),
-								sql`${product.stockQty} <= COALESCE(${product.lowStockThreshold}, ${lowStockDefault})`
-							)
+	const [
+		toHandOver,
+		receipts,
+		[paidToday],
+		lowStock,
+		studentReceipts,
+		[noSeat],
+		expiring,
+		[waiting],
+		[overdue]
+	] = await Promise.all([
+		canOrders
+			? db
+					.select({ status: orders.status, n: count() })
+					.from(orders)
+					.where(inArray(orders.status, ['paid', 'preparing', 'ready', 'paid_unfulfillable']))
+					.groupBy(orders.status)
+			: [],
+		canOrders
+			? db
+					.select({
+						orderId: orders.id,
+						ref: orders.ref,
+						name: orders.contactName,
+						amount: payment.amount,
+						createdAt: payment.createdAt
+					})
+					.from(payment)
+					.innerJoin(orders, eq(orders.id, payment.orderId))
+					.where(and(eq(payment.provider, 'bank_transfer'), eq(payment.status, 'initiated')))
+					.orderBy(asc(payment.id))
+					.limit(10)
+			: [],
+		canOrders
+			? db
+					.select({ n: count(), total: sql<string>`COALESCE(SUM(${orders.total}), 0)` })
+					.from(orders)
+					.where(and(gte(orders.paidAt, start), lt(orders.paidAt, end)))
+			: [{ n: 0, total: '0' }],
+		canStock
+			? db
+					.select({ id: product.id, name: product.name, stockQty: product.stockQty })
+					.from(product)
+					.where(
+						and(
+							notDeleted(product),
+							eq(product.isActive, true),
+							sql`${product.stockQty} <= COALESCE(${product.lowStockThreshold}, ${lowStockDefault})`
 						)
-						.orderBy(asc(product.stockQty), desc(product.isFeatured))
-						.limit(10)
-				: [],
-			canSchool
-				? db
-						.select({
-							registrationId: registration.id,
-							ref: registration.ref,
-							name: registration.contactName,
-							amount: payment.amount,
-							createdAt: payment.createdAt
-						})
-						.from(payment)
-						.innerJoin(registration, eq(registration.id, payment.registrationId))
-						.where(and(eq(payment.provider, 'bank_transfer'), eq(payment.status, 'initiated')))
-						.orderBy(asc(payment.id))
-						.limit(10)
-				: [],
-			canSchool
-				? db
-						.select({ n: count() })
-						.from(registration)
-						.where(eq(registration.status, 'paid_unfulfillable'))
-				: [{ n: 0 }]
-		]);
+					)
+					.orderBy(asc(product.stockQty), desc(product.isFeatured))
+					.limit(10)
+			: [],
+		canSchool
+			? db
+					.select({
+						registrationId: registration.id,
+						ref: registration.ref,
+						name: registration.contactName,
+						amount: payment.amount,
+						createdAt: payment.createdAt
+					})
+					.from(payment)
+					.innerJoin(registration, eq(registration.id, payment.registrationId))
+					.where(and(eq(payment.provider, 'bank_transfer'), eq(payment.status, 'initiated')))
+					.orderBy(asc(payment.id))
+					.limit(10)
+			: [],
+		canSchool
+			? db
+					.select({ n: count() })
+					.from(registration)
+					.where(eq(registration.status, 'paid_unfulfillable'))
+			: [{ n: 0 }],
+		// Expired, expiring within the warning window, or pulled: lots someone has to deal with.
+		canStock ? expiryReport() : [],
+		canApprove
+			? db.select({ n: count() }).from(requisition).where(eq(requisition.status, 'submitted'))
+			: [{ n: 0 }],
+		canBuy
+			? db
+					.select({ n: count() })
+					.from(purchaseOrder)
+					.where(
+						and(
+							inArray(purchaseOrder.status, ['ordered', 'partially_received']),
+							lt(purchaseOrder.expectedDate, localToday())
+						)
+					)
+			: [{ n: 0 }]
+	]);
 
 	const handOver = toHandOver.reduce((sum, row) => sum + row.n, 0);
 
@@ -135,8 +170,43 @@ export const load = async ({ locals }) => {
 						}
 					]
 				: []),
+			...(canApprove
+				? [
+						{
+							key: 'reqWaiting',
+							label: 'Requisitions to decide',
+							value: waiting.n,
+							format: 'count' as const,
+							group: 'today',
+							hint: 'Teams waiting for materials',
+							tone: waiting.n ? ('warning' as const) : ('neutral' as const)
+						}
+					]
+				: []),
+			...(canBuy
+				? [
+						{
+							key: 'ordersOverdue',
+							label: 'Supplier orders late',
+							value: overdue.n,
+							format: 'count' as const,
+							group: 'today',
+							hint: 'Past the date they were expected',
+							tone: overdue.n ? ('warning' as const) : ('neutral' as const)
+						}
+					]
+				: []),
 			...(canStock
 				? [
+						{
+							key: 'expiring',
+							label: 'Expired or expiring',
+							value: expiring.length,
+							format: 'count' as const,
+							group: 'today',
+							hint: 'Lots to move, sell first or write off',
+							tone: expiring.length ? ('negative' as const) : ('neutral' as const)
+						},
 						{
 							key: 'low',
 							label: 'Low or out of stock',

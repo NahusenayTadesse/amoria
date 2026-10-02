@@ -16,7 +16,10 @@
 		/** Which product, for the stock page; omitted on the product's own page. */
 		productId?: number;
 		productName: string;
+		/** The total that can be sold, across every location. */
 		onHand: number;
+		/** Where the change can happen; the first is the default (the shop floor). */
+		locations?: { value: number; name: string }[];
 		open?: boolean;
 		hideTrigger?: boolean;
 	};
@@ -27,6 +30,7 @@
 		productId,
 		productName,
 		onHand,
+		locations = [],
 		open = $bindable(false),
 		hideTrigger = false
 	}: Props = $props();
@@ -47,13 +51,38 @@
 	schema={stockAdjustSchema}
 	triggerLabel="Adjust stock"
 	submitLabel="Save"
-	seed={{ productId, mode: 'move', reason: 'delivery', qty: 0, counted: onHand, note: '' }}
+	seed={{
+		productId,
+		locationId: locations[0]?.value,
+		mode: 'move',
+		reason: 'delivery',
+		qty: 0,
+		counted: onHand,
+		note: ''
+	}}
 	bind:open
 	{hideTrigger}
 	resetOnSuccess
 >
 	{#snippet fields({ form, errors, values })}
 		{#if productId !== undefined}<input type="hidden" name="productId" value={productId} />{/if}
+		{#if locations.length > 1}
+			<div class="grid gap-2">
+				<label for="adjust-location" class="text-sm font-medium">Where</label>
+				<select
+					id="adjust-location"
+					name="locationId"
+					value={values.locationId}
+					onchange={(e) =>
+						form.update((v) => ({ ...v, locationId: Number(e.currentTarget.value) }))}
+					class="h-9 rounded-md border border-input bg-transparent px-3 text-sm"
+				>
+					{#each locations as l (l.value)}
+						<option value={l.value}>{l.name}</option>
+					{/each}
+				</select>
+			</div>
+		{/if}
 		<fieldset class="flex gap-2 text-sm">
 			<legend class="sr-only">What kind of change</legend>
 			{#each [{ value: 'move', label: 'Add or remove' }, { value: 'count', label: 'Stock count' }] as option (option.value)}
@@ -83,8 +112,8 @@
 				name="counted"
 				type="number"
 				min="0"
-				label="Counted on the shelf"
-				description="The difference from {onHand} is recorded as a correction."
+				label="Counted at that location"
+				description="The difference from what is on record there is recorded as a correction."
 			/>
 		{:else}
 			<!--

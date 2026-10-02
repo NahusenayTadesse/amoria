@@ -22,7 +22,8 @@
 				type: 'select',
 				choices: [
 					{ value: 'gift', name: 'Gifts' },
-					{ value: 'rental', name: 'Rental equipment' }
+					{ value: 'rental', name: 'Rental equipment' },
+					{ value: 'material', name: 'Materials' }
 				]
 			},
 			{ name: 'nameAm', label: 'Name (Amharic)', type: 'text', required: false },

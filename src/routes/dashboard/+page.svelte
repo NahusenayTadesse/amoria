@@ -14,7 +14,10 @@
 		receipts: '/dashboard/orders',
 		studentReceipts: '/dashboard/school/students',
 		paidToday: '/dashboard/orders?queue=all',
-		low: '/dashboard/stock?level=low'
+		low: '/dashboard/stock?level=low',
+		expiring: '/dashboard/stock/expiry',
+		reqWaiting: '/dashboard/requisitions',
+		ordersOverdue: '/dashboard/purchasing'
 	};
 </script>
 

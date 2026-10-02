@@ -17,6 +17,8 @@ import { db } from '$lib/server/db';
 import { category, product } from '$lib/server/db/schema';
 import { getSettings } from '$lib/server/services/settings';
 import { adjustStock } from '$lib/server/services/stock';
+import { locationOptions } from '$lib/server/options';
+import { actorOf } from '$lib/server/paymentAdmin';
 import { stockAdjustSchema } from '$lib/schemas/dashboard';
 import { PRODUCT_KIND_LABELS, type StockReason } from '$lib/stock';
 import { PRODUCT_KINDS } from '$lib/constants';
@@ -64,8 +66,10 @@ export const load = async ({ url, locals }) => {
 				id: product.id,
 				name: product.name,
 				kind: product.kind,
+				unit: product.unit,
 				category: category.name,
 				stockQty: product.stockQty,
+				worth: sql<number>`ROUND(${product.stockQty} * ${product.avgCost}, 2)`,
 				threshold: sql<number>`${threshold}`,
 				level: levelOf,
 				held,
@@ -113,11 +117,13 @@ export const load = async ({ url, locals }) => {
 		rows: rows.map((row) => ({
 			...row,
 			held: Number(row.held),
+			worth: Number(row.worth),
 			threshold: Number(row.threshold),
 			kindLabel: PRODUCT_KIND_LABELS[row.kind]
 		})),
 		server: { pagination: pagination(query, total), facets, filters: currentQuery(query) },
 		canAdjust: hasPermission(locals, 'stock.adjust'),
+		locations: await locationOptions({ withQuarantine: true }),
 		adjustForm: await superValidate(zod4(stockAdjustSchema))
 	};
 };
@@ -129,17 +135,14 @@ export const actions = {
 		if (!form.valid || !form.data.productId) {
 			return message(form, { type: 'error', text: 'Check the quantity.' }, { status: 400 });
 		}
-		const { productId, mode, reason, qty, counted, note } = form.data;
+		const { productId, locationId, mode, reason, qty, counted, note } = form.data;
 		try {
 			await adjustStock(
 				productId,
 				mode === 'count'
-					? { mode, counted, note: note || null }
-					: { mode, reason: reason as StockReason, qty, note: note || null },
-				{
-					locals: { user: event.locals.user ? { id: event.locals.user.id } : null },
-					getClientAddress: event.getClientAddress
-				}
+					? { mode, counted, note: note || null, locationId }
+					: { mode, reason: reason as StockReason, qty, note: note || null, locationId },
+				actorOf(event)
 			);
 		} catch (err) {
 			if (err instanceof WriteRefused)

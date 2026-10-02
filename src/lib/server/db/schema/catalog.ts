@@ -6,14 +6,13 @@ import {
 	mysqlEnum,
 	mysqlTable,
 	text,
-	timestamp,
 	uniqueIndex,
 	varchar,
 	type AnyMySqlColumn
 } from 'drizzle-orm/mysql-core';
-import { PRODUCT_KINDS, STOCK_REASONS } from '../../../constants';
-import { user } from './auth';
-import { birr } from './columns';
+import { PRODUCT_KINDS, TAX_CODES } from '../../../constants';
+import { birr, unitCost } from './columns';
+import { supplier } from './suppliers';
 import { deletionFields, lesserFields, secureFields } from './secureFields';
 
 /** Gift and rental categories: a kit `LookupPage` + `contentCrud`. */
@@ -35,10 +34,11 @@ export const category = mysqlTable(
 );
 
 /**
- * Gifts and rental equipment in one stock list (`contentCrud`, `references: [category]`).
+ * Everything the company stocks, in one list (`contentCrud`, `references: [category]`): gifts for
+ * sale, rental equipment, and materials used by décor jobs and the school.
  *
- * `stockQty` is written only by `services/stock.ts`, never by the CRUD form (its `transform` strips
- * it): gift units on hand, or rental units owned. Rental *availability* comes from bookings.
+ * `stockQty` is written only by `services/inventory/ledger`, never by the CRUD form (its
+ * `transform` strips it). Rental *availability* comes from bookings.
  */
 export const product = mysqlTable(
 	'product',
@@ -60,7 +60,28 @@ export const product = mysqlTable(
 		/** Rental security deposit **[Decision]** — keep 0 until refunds are designed (§5.4). */
 		deposit: birr('deposit').notNull().default(0),
 		minRentalDays: int('min_rental_days').notNull().default(1),
+		/**
+		 * Units on hand that can be sold or issued: the sum of `stock_balance` over every location
+		 * except quarantine. A cache, written only by `services/inventory/ledger` in the same
+		 * transaction as the balances it sums.
+		 */
 		stockQty: int('stock_qty').notNull().default(0),
+		/** The company's own code, printed on labels. Unique when given. */
+		sku: varchar('sku', { length: 40 }).unique(),
+		/** What the scanner reads. Unique when given. */
+		barcode: varchar('barcode', { length: 40 }).unique(),
+		/** What one unit is counted in: pcs, box, m, kg. A label only; quantities are whole numbers. */
+		unit: varchar('unit', { length: 20 }).notNull().default('pcs'),
+		/** Lot number and expiry are asked for on every delivery (chocolates, candles, flowers). */
+		trackLots: boolean('track_lots').notNull().default(false),
+		/** Moving-average cost per unit, moved only by stock coming in (`services/inventory/ledger`). */
+		avgCost: unitCost('avg_cost').notNull().default(0),
+		/** Where it normally comes from: the default supplier on a new purchase order. */
+		mainSupplierId: int('main_supplier_id').references(() => supplier.id, {
+			onDelete: 'set null'
+		}),
+		/** Standard-rated, zero-rated or exempt (VAT, §`settings.vatRegistered`). */
+		taxCode: mysqlEnum('tax_code', TAX_CODES).notNull().default('standard'),
 		/** Null falls back to the `lowStockDefault` setting. */
 		lowStockThreshold: int('low_stock_threshold'),
 		isFeatured: boolean('is_featured').notNull().default(false),
@@ -89,35 +110,4 @@ export const productImage = mysqlTable(
 		...deletionFields
 	},
 	(table) => [index('product_image_owner_idx').on(table.productId, table.sortOrder)]
-);
-
-/**
- * The stock ledger. Append-only: one row per change to `product.stockQty`, written by
- * `stock.move()` in the same transaction as the update, with the product row locked.
- *
- * `refType`/`refId` name what caused it (`order`, `rental_booking`, …) — a polymorphic pointer,
- * so no foreign key.
- */
-export const stockMovement = mysqlTable(
-	'stock_movement',
-	{
-		id: int('id').autoincrement().primaryKey(),
-		productId: int('product_id')
-			.notNull()
-			.references(() => product.id, { onDelete: 'restrict' }),
-		/** Signed: positive in, negative out. */
-		delta: int('delta').notNull(),
-		reason: mysqlEnum('reason', STOCK_REASONS).notNull(),
-		refType: varchar('ref_type', { length: 20 }),
-		refId: int('ref_id'),
-		note: varchar('note', { length: 255 }),
-		createdBy: varchar('created_by', { length: 255 }).references(() => user.id, {
-			onDelete: 'set null'
-		}),
-		createdAt: timestamp('created_at', { fsp: 3 }).defaultNow().notNull()
-	},
-	(table) => [
-		index('stock_movement_product_idx').on(table.productId, table.createdAt),
-		index('stock_movement_ref_idx').on(table.refType, table.refId)
-	]
 );

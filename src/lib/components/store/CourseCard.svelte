@@ -83,7 +83,7 @@
 			<div class="relative z-10 flex flex-wrap gap-2">
 				{#if course.next}
 					<a
-						href={path(`/school/register/${course.next.id}`)}
+						href={path(`/school/${course.slug}/register?class=${course.next.id}`)}
 						class="btn-shine group/btn inline-flex h-11 items-center gap-2 rounded-full bg-[var(--am-ribbon)] px-5 text-sm font-semibold text-white transition-transform duration-300 hover:-translate-y-0.5"
 					>
 						{m.school_register()}

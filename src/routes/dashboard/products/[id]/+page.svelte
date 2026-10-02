@@ -15,7 +15,7 @@
 	import { ethiopianDateTime } from '@nahu/admin-kit/tableCells';
 	import { publicFileUrl } from '@nahu/admin-kit/files';
 	import StockAdjustDialog from '$lib/components/dashboard/StockAdjustDialog.svelte';
-	import { PRODUCT_KIND_LABELS, STOCK_REASON_META, STOCK_REF_LINKS } from '$lib/stock';
+	import { PRODUCT_KIND_LABELS, STOCK_REASON_META, STOCK_REF_LINKS, ethDay } from '$lib/stock';
 	import { imageAdd } from '$lib/schemas/catalog';
 
 	let { data } = $props();
@@ -40,6 +40,14 @@
 			format: 'count' as const,
 			group: 'stock',
 			hint: 'Returns to stock if they are not paid in time'
+		},
+		{
+			key: 'worth',
+			label: 'Worth',
+			value: Math.round(p.stockQty * p.avgCost * 100) / 100,
+			format: 'money' as const,
+			group: 'stock',
+			hint: `${formatETB(p.avgCost)} each on average`
 		},
 		{
 			key: 'low',
@@ -88,21 +96,77 @@
 					action="?/adjust"
 					productName={p.name}
 					onHand={p.stockQty}
+					locations={data.locations}
 				/>
 			</div>
 		{/if}
 	</div>
 	<p class="text-muted-foreground">
 		{PRODUCT_KIND_LABELS[p.kind]}, {data.categoryName ?? 'no category'},
-		{p.kind === 'gift' ? formatETB(p.price) : `${formatETB(p.dailyRate)} a day`}
+		{p.kind === 'gift'
+			? formatETB(p.price)
+			: p.kind === 'rental'
+				? `${formatETB(p.dailyRate)} a day`
+				: 'used, not sold'}
 		{#if p.nameAm}<span lang="am">({p.nameAm})</span>{/if}
+		{#if p.sku}<span class="ml-2">Code {p.sku}</span>{/if}
+		{#if p.barcode}<span class="ml-2">Barcode {p.barcode}</span>{/if}
+		{#if data.mainSupplier}<span class="ml-2">From {data.mainSupplier}</span>{/if}
 	</p>
 
-	<div class="grid gap-3 sm:grid-cols-3">
+	<div class="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
 		{#each stats as stat (stat.key)}
 			<StatCard {stat} amharicMoney={false} />
 		{/each}
 	</div>
+
+	<Card.Root>
+		<Card.Header>
+			<Card.Title>Where it is</Card.Title>
+			<Card.Description>
+				Units by location{p.trackLots ? ' and lot' : ''}. Stock in quarantine is set aside: it is
+				not sold and is not counted in "In stock".
+			</Card.Description>
+		</Card.Header>
+		<Card.Content>
+			{#if data.balances.length === 0}
+				<p class="text-sm text-muted-foreground">Nothing anywhere yet.</p>
+			{:else}
+				<table class="w-full text-sm">
+					<thead class="text-left text-muted-foreground">
+						<tr>
+							<th class="py-2 font-medium">Location</th>
+							{#if p.trackLots}<th class="py-2 font-medium">Lot</th>
+								<th class="py-2 font-medium">Expires</th>{/if}
+							<th class="py-2 text-right font-medium">Units</th>
+						</tr>
+					</thead>
+					<tbody class="divide-y">
+						{#each data.balances as b, i (i)}
+							<tr>
+								<td class="py-2">
+									{b.location}
+									{#if b.kind === 'quarantine'}<span class="text-xs text-muted-foreground"
+											>(set aside)</span
+										>{/if}
+								</td>
+								{#if p.trackLots}
+									<td class="py-2">
+										{b.lot ?? '—'}
+										{#if b.lotStatus && b.lotStatus !== 'available'}
+											<span class="text-xs text-muted-foreground">({b.lotStatus})</span>
+										{/if}
+									</td>
+									<td class="py-2">{b.expiryDate ? ethDay(b.expiryDate) : '—'}</td>
+								{/if}
+								<td class="py-2 text-right tabular-nums">{b.quantity} {p.unit}</td>
+							</tr>
+						{/each}
+					</tbody>
+				</table>
+			{/if}
+		</Card.Content>
+	</Card.Root>
 
 	<Card.Root>
 		<Card.Header class="flex flex-row items-center justify-between">
@@ -193,8 +257,10 @@
 					<thead class="text-left text-muted-foreground">
 						<tr
 							><th class="py-2 font-medium">When</th><th class="py-2 font-medium">What</th><th
-								class="py-2 font-medium">By</th
-							><th class="py-2 text-right font-medium">Change</th></tr
+								class="py-2 font-medium">Where</th
+							><th class="py-2 font-medium">By</th><th class="py-2 text-right font-medium"
+								>Change</th
+							></tr
 						>
 					</thead>
 					<tbody class="divide-y">
@@ -209,6 +275,9 @@
 											>({mv.refType} {mv.refId})</a
 										>{/if}
 									{#if mv.note}<span class="text-muted-foreground">: {mv.note}</span>{/if}
+								</td>
+								<td class="py-2 text-muted-foreground">
+									{mv.location}{mv.lot ? `, lot ${mv.lot}` : ''}
 								</td>
 								<td class="py-2 text-muted-foreground">{mv.by ?? 'System'}</td>
 								<td

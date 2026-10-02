@@ -33,6 +33,9 @@ const crud = contentCrud({
 		for (const key of ['titleAm', 'summary', 'summaryAm', 'durationText'] as const) {
 			row[key] = row[key] || null;
 		}
+		// Left empty: the course runs the default 20 days, and the builder asks for a class size.
+		row.durationDays = row.durationDays ?? null;
+		row.maxStudents = row.maxStudents ?? null;
 		return row;
 	}
 });

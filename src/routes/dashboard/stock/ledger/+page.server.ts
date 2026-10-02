@@ -8,7 +8,7 @@ import {
 	type WhereSpec
 } from '@nahu/admin-kit/server/queryFilters';
 import { db } from '$lib/server/db';
-import { product, stockMovement, user } from '$lib/server/db/schema';
+import { location, product, stockLot, stockMovement, user } from '$lib/server/db/schema';
 import { STOCK_REASONS, PRODUCT_KINDS } from '$lib/constants';
 import { PRODUCT_KIND_LABELS, STOCK_REASON_META, type StockReason } from '$lib/stock';
 
@@ -52,10 +52,15 @@ export const load = async ({ url }) => {
 				refType: stockMovement.refType,
 				refId: stockMovement.refId,
 				note: stockMovement.note,
+				location: location.name,
+				lot: stockLot.lotNumber,
+				unitCost: stockMovement.unitCost,
 				by: user.name
 			})
 			.from(stockMovement)
 			.innerJoin(product, eq(product.id, stockMovement.productId))
+			.innerJoin(location, eq(location.id, stockMovement.locationId))
+			.leftJoin(stockLot, eq(stockLot.id, stockMovement.lotId))
 			.leftJoin(user, eq(user.id, stockMovement.createdBy))
 			.where(where)
 			.orderBy(desc(stockMovement.id))

@@ -15,6 +15,7 @@
 	import { chatHref } from '$lib/chat';
 	import ImageGallery from '$lib/components/store/ImageGallery.svelte';
 	import SeatsLeft from '$lib/components/store/SeatsLeft.svelte';
+	import { courseDays, upcomingRanges } from '$lib/schoolPlan';
 
 	let { data } = $props();
 
@@ -31,6 +32,13 @@
 		}))
 	);
 	const open = $derived(course.intakes.filter((intake) => intake.seatsLeft > 0));
+	/** Every upcoming date range, its shifts together. */
+	const ranges = $derived(upcomingRanges(course.intakes, Infinity));
+	const days = $derived(courseDays(course.durationDays));
+	const shiftLabel = (c: (typeof course.intakes)[number]) =>
+		c.shiftName
+			? localized({ name: c.shiftName, nameAm: c.shiftNameAm }, 'name')
+			: m.school_class();
 	const ask = $derived(chatHref(data.contact, m.chat_school()));
 	const path = (to: string) => resolve(localizeHref(to) as AppPath);
 
@@ -128,21 +136,19 @@
 					<dt class="text-xs text-muted-foreground">{m.school_fee()}</dt>
 					<dd class="display text-3xl font-bold tabular-nums">{birr(course.fee)}</dd>
 				</div>
-				{#if course.durationText}
-					<div>
-						<dt class="text-xs text-muted-foreground">{m.school_duration()}</dt>
-						<dd class="mt-1 flex items-center gap-2 text-base font-semibold">
-							<Clock class="h-4 w-4 text-[var(--am-ribbon)]" aria-hidden="true" />
-							{course.durationText}
-						</dd>
-					</div>
-				{/if}
+				<div>
+					<dt class="text-xs text-muted-foreground">{m.school_duration()}</dt>
+					<dd class="mt-1 flex items-center gap-2 text-base font-semibold">
+						<Clock class="h-4 w-4 text-[var(--am-ribbon)]" aria-hidden="true" />
+						{course.durationText || m.school_days({ days })}
+					</dd>
+				</div>
 			</dl>
 
 			<div class="rise mt-8 flex flex-wrap items-center gap-3" style="--i: 5">
 				{#if open[0]}
 					<a
-						href={path(`/school/register/${open[0].id}`)}
+						href={path(`/school/${course.slug}/register`)}
 						class="btn-shine group inline-flex h-13 items-center gap-2 rounded-full bg-[var(--am-ribbon)] px-7 text-[0.95rem] font-semibold text-white shadow-[0_14px_34px_-14px_var(--am-ribbon)] transition-transform duration-300 hover:-translate-y-0.5"
 					>
 						{m.school_register()}
@@ -169,13 +175,13 @@
 	<!-- Intakes -->
 	<section id="intakes" class="mt-20 scroll-mt-24 sm:mt-28">
 		<h2 use:reveal class="display text-3xl font-bold sm:text-4xl">{m.school_intakes()}</h2>
-		{#if course.intakes.length}
+		{#if ranges.length}
 			<ul class="mt-8 grid gap-4 md:grid-cols-2">
-				{#each course.intakes as intake, index (intake.id)}
+				{#each ranges as range, index (range.startDate)}
 					<li
 						use:reveal
 						style="--i: {index % 2}"
-						class="flex flex-wrap items-center justify-between gap-4 rounded-[1.5rem] border border-border bg-card p-6"
+						class="flex flex-col gap-4 rounded-[1.5rem] border border-border bg-card p-6"
 					>
 						<div class="min-w-0">
 							<p
@@ -184,29 +190,41 @@
 								<CalendarDays class="h-4 w-4" aria-hidden="true" />
 								{m.school_starts()}
 							</p>
-							<p class="display mt-1 text-xl font-bold">{bothCalendarsOnDay(intake.startDate)}</p>
-							{#if intake.endDate}
+							<p class="display mt-1 text-xl font-bold">{bothCalendarsOnDay(range.startDate)}</p>
+							{#if range.endDate}
 								<p class="mt-1 text-sm text-muted-foreground">
-									{m.school_ends()}: {bothCalendarsOnDay(intake.endDate)}
+									{m.school_ends()}: {bothCalendarsOnDay(range.endDate)}
 								</p>
 							{/if}
-							{#if intake.scheduleText}
-								<p class="mt-1 text-sm text-muted-foreground">{intake.scheduleText}</p>
-							{/if}
-							<div class="mt-3"><SeatsLeft count={intake.seatsLeft} /></div>
 						</div>
-						{#if intake.seatsLeft > 0}
-							<a
-								href={path(`/school/register/${intake.id}`)}
-								class="btn-shine group inline-flex h-12 items-center gap-2 rounded-full bg-foreground px-6 text-sm font-semibold text-background transition-transform duration-300 hover:-translate-y-0.5"
-							>
-								{m.school_register()}
-								<ArrowRight
-									class="h-4 w-4 transition-transform duration-300 group-hover:translate-x-1"
-									aria-hidden="true"
-								/>
-							</a>
-						{/if}
+						<ul class="flex flex-col gap-2 border-t border-border pt-4">
+							{#each range.classes as c (c.id)}
+								<li class="flex flex-wrap items-center justify-between gap-3">
+									<span class="text-sm">
+										<span class="font-semibold">{shiftLabel(c)}</span>
+										{#if c.shiftTime}<span class="text-muted-foreground">, {c.shiftTime}</span>{/if}
+									</span>
+									<span class="flex items-center gap-3">
+										<SeatsLeft count={c.seatsLeft} />
+										{#if c.seatsLeft > 0}
+											<a
+												href={path(`/school/${course.slug}/register?class=${c.id}`)}
+												class="group inline-flex h-9 items-center gap-1.5 rounded-full bg-foreground px-4 text-xs font-semibold text-background transition-transform duration-300 hover:-translate-y-0.5"
+												aria-label="{m.school_register()}: {shiftLabel(c)}, {bothCalendarsOnDay(
+													range.startDate
+												)}"
+											>
+												{m.school_register()}
+												<ArrowRight
+													class="h-3.5 w-3.5 transition-transform duration-300 group-hover:translate-x-1"
+													aria-hidden="true"
+												/>
+											</a>
+										{/if}
+									</span>
+								</li>
+							{/each}
+						</ul>
 					</li>
 				{/each}
 			</ul>

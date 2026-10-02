@@ -22,6 +22,20 @@
       "when": 1790671699152,
       "tag": "0002_delivery_areas",
       "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "5",
+      "when": 1790759265866,
+      "tag": "0003_stock_control",
+      "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "5",
+      "when": 1790778706489,
+      "tag": "0004_school_classes",
+      "breakpoints": true
     }
   ]
 }

@@ -3,15 +3,15 @@ import { renderComponent } from '@nahu/admin-kit/components/ui/data-table/index.
 import DataTableLinks from '@nahu/admin-kit/components/Table/data-table-links.svelte';
 import type { LookupRow } from '@nahu/admin-kit/components/lookup/types';
 
-/** Open intakes and confirmed students, linking to the course's page where they are managed. */
+/** Open classes and confirmed students, linking to the course's page where they are managed. */
 export const extraColumns: ColumnDef<LookupRow>[] = [
 	{
 		accessorKey: 'openIntakes',
-		header: 'Open intakes',
+		header: 'Open classes',
 		cell: ({ row }) =>
 			renderComponent(DataTableLinks, {
 				id: row.original.id,
-				name: `${row.original.openIntakes} open, photos and dates`,
+				name: `${row.original.openIntakes} open, plan classes`,
 				entity: 'course'
 			})
 	},

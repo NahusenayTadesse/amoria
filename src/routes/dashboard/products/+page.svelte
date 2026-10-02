@@ -14,7 +14,8 @@
 			type: 'select',
 			choices: [
 				{ value: 'gift', name: 'Gift (sold)' },
-				{ value: 'rental', name: 'Rental equipment' }
+				{ value: 'rental', name: 'Rental equipment' },
+				{ value: 'material', name: 'Material (décor, school, packaging: never sold online)' }
 			],
 			inTable: false
 		},
@@ -24,6 +25,38 @@
 			type: 'reference',
 			options: 'categoryList',
 			display: 'category'
+		},
+		{ name: 'sku', label: 'Code (SKU)', type: 'text', required: false },
+		{ name: 'barcode', label: 'Barcode', type: 'text', required: false, inTable: false },
+		{ name: 'unit', label: 'Counted in', type: 'text', required: false, inTable: false },
+		{
+			name: 'mainSupplierId',
+			label: 'Main supplier',
+			type: 'reference',
+			options: 'supplierList',
+			display: 'supplier',
+			required: false,
+			inTable: false
+		},
+		{
+			name: 'taxCode',
+			label: 'VAT',
+			type: 'select',
+			choices: [
+				{ value: 'standard', name: 'Standard rate' },
+				{ value: 'zero', name: 'Zero-rated' },
+				{ value: 'exempt', name: 'Exempt' }
+			],
+			inTable: false
+		},
+		{
+			name: 'trackLots',
+			label: 'Track lot number and expiry',
+			type: 'checkbox',
+			required: false,
+			inTable: false,
+			trueLabel: 'Yes',
+			falseLabel: 'No'
 		},
 		{ name: 'price', label: 'Price (gifts)', type: 'money', required: false },
 		{
@@ -108,8 +141,8 @@
 <div class="flex flex-col gap-2">
 	<h1 class="text-2xl font-semibold">Products</h1>
 	<p class="text-muted-foreground">
-		Gifts and rental equipment. Stock is not changed here: open a product to record deliveries,
-		damage or a stock count. New products start with 0 in stock.
+		Gifts, rental equipment and the materials the company uses. Stock is not changed here: open a
+		product to record deliveries, damage or a stock count. New products start with 0 in stock.
 	</p>
 	<LookupPage
 		{data}

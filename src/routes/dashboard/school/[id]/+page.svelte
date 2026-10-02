@@ -18,6 +18,8 @@
 	import { renderComponent } from '@nahu/admin-kit/components/ui/data-table/index.js';
 	import { imageAdd } from '$lib/schemas/catalog';
 	import { intakeAdd, intakeEdit } from '$lib/schemas/school';
+	import ClassBuilder from '$lib/components/dashboard/ClassBuilder.svelte';
+	import { courseDays } from '$lib/schoolPlan';
 	import SeatsCell from './SeatsCell.svelte';
 
 	let { data } = $props();
@@ -35,7 +37,7 @@
 			value: seatsTaken,
 			format: 'count' as const,
 			group: 'school',
-			hint: 'Paid, across every intake'
+			hint: 'Paid, across every class'
 		},
 		{
 			key: 'awaiting',
@@ -52,27 +54,47 @@
 			value: needSeat,
 			format: 'count' as const,
 			group: 'school',
-			hint: 'Paid after the intake filled: rebook or refund',
+			hint: 'Paid after the class filled: rebook or refund',
 			tone: needSeat ? ('negative' as const) : ('neutral' as const)
 		}
 	]);
 
-	/** Where an intake's students are listed: the students page, filtered to it. */
+	/** Where a class's students are listed: the students page, filtered to it. */
 	const studentsOf = (id: number) => `/dashboard/school/students?intake=${id}&queue=all`;
 
-	const intakeConfig: LookupConfig = {
-		entity: 'Intake',
-		plural: 'Intakes',
+	const days = $derived(courseDays(c.durationDays));
+	const activeShifts = $derived(data.shifts.filter((s) => s.status));
+
+	const intakeConfig: LookupConfig = $derived({
+		entity: 'Class',
+		plural: 'Classes',
 		fields: [
 			{ name: 'startDate', label: 'First day', type: 'date' },
-			{ name: 'endDate', label: 'Last day (optional)', type: 'date', required: false },
+			{
+				name: 'endDate',
+				label: 'Last day',
+				type: 'date',
+				required: false
+			},
+			...(data.shifts.length
+				? [
+						{
+							name: 'shiftId',
+							label: 'Shift',
+							type: 'reference' as const,
+							picker: 'select' as const,
+							display: 'shiftName',
+							required: false
+						}
+					]
+				: []),
 			{
 				name: 'scheduleText',
-				label: 'Schedule (e.g. Saturdays 9:00 to 12:00)',
+				label: 'Note for students',
 				type: 'text',
 				required: false
 			},
-			{ name: 'seatLimit', label: 'Seats', type: 'number' },
+			{ name: 'seatLimit', label: 'Max students', type: 'number' },
 			{
 				name: 'status',
 				label: 'Registration',
@@ -100,7 +122,7 @@
 				}
 			}
 		]
-	};
+	});
 
 	const onDelete = (done: string) => {
 		return async ({
@@ -126,7 +148,9 @@
 			/>
 		{/snippet}
 		<p class="text-muted-foreground">
-			{formatETB(c.fee)}{c.durationText ? `, ${c.durationText}` : ''}
+			{formatETB(c.fee)}, {days} days per class{c.maxStudents
+				? `, up to ${c.maxStudents} students`
+				: ''}{c.durationText ? `, ${c.durationText}` : ''}
 			{#if c.titleAm}<span lang="am">({c.titleAm})</span>{/if}
 			<a href={resolve('/dashboard/school')} class="ml-2 text-sm hover:underline">All courses</a>
 		</p>
@@ -140,10 +164,29 @@
 
 	<Card.Root>
 		<Card.Header>
-			<Card.Title>Intakes</Card.Title>
+			<Card.Title>Plan classes</Card.Title>
 			<Card.Description>
-				Each run of the course. Guests can register while an intake is open, has not started and
-				still has a seat. Change the seat limit or close it here.
+				Give a date range and the classes fill in: {days}-day classes one after the other, one per
+				shift. Check them, change any class's size or leave it out, then create them all at once.
+			</Card.Description>
+		</Card.Header>
+		<Card.Content>
+			<ClassBuilder
+				durationDays={c.durationDays}
+				maxStudents={c.maxStudents}
+				shifts={activeShifts}
+				existing={data.intakes.rows.map((r) => ({ startDate: r.startDate, shiftId: r.shiftId }))}
+			/>
+		</Card.Content>
+	</Card.Root>
+
+	<Card.Root>
+		<Card.Header>
+			<Card.Title>Classes</Card.Title>
+			<Card.Description>
+				Each class is one date range in one shift. Guests can register while a class is open, has
+				not started and still has a place; the registration page offers the next 4 date ranges. A
+				last day left empty is set {days} days from the first. Change a class's size or close it here.
 			</Card.Description>
 		</Card.Header>
 		<Card.Content>
@@ -153,6 +196,7 @@
 				addForm={data.intakes.addForm}
 				editForm={data.intakes.editForm}
 				canDelete={data.isSuperAdmin}
+				options={{ shiftId: data.shifts.map((s) => ({ value: s.id, name: s.name })) }}
 				schemas={{ add: intakeAdd, edit: intakeEdit }}
 				actions={{ add: '?/addIntake', edit: '?/editIntake', delete: '?/deleteIntake' }}
 			/>

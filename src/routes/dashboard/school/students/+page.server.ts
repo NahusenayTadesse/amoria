@@ -9,7 +9,7 @@ import {
 	type WhereSpec
 } from '@nahu/admin-kit/server/queryFilters';
 import { db } from '$lib/server/db';
-import { course, courseIntake, registration } from '$lib/server/db/schema';
+import { course, courseIntake, registration, schoolShift } from '$lib/server/db/schema';
 import { REGISTRATION_STATUSES } from '$lib/constants';
 import { REGISTRATION_STATUS_LABELS, type RegistrationStatus } from '$lib/registrationStatus';
 
@@ -65,11 +65,15 @@ export const load = async ({ url }) => {
 				status: registration.status,
 				courseTitle: course.title,
 				startDate: courseIntake.startDate,
+				shiftName: schoolShift.name,
+				result: registration.result,
+				certificateNo: registration.certificateNo,
 				receiptWaiting
 			})
 			.from(registration)
 			.innerJoin(courseIntake, eq(courseIntake.id, registration.intakeId))
 			.innerJoin(course, eq(course.id, courseIntake.courseId))
+			.leftJoin(schoolShift, eq(schoolShift.id, courseIntake.shiftId))
 			.where(where)
 			.orderBy(...(orderBy(query, SORTS) ?? [desc(registration.createdAt)]))
 			.limit(query.limit)

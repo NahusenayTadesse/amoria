@@ -12,14 +12,14 @@
 	import { registrationSchema } from '$lib/schemas/school';
 	import ContactFields from '$lib/components/store/ContactFields.svelte';
 	import PaymentMethodFields from '$lib/components/store/PaymentMethodFields.svelte';
+	import ClassPicker from '$lib/components/store/ClassPicker.svelte';
 	import SeatsLeft from '$lib/components/store/SeatsLeft.svelte';
 
 	let { data } = $props();
 
-	const intake = $derived(data.intake);
-	const title = $derived(
-		intake ? localized({ name: intake.courseTitle, nameAm: intake.courseTitleAm }, 'name') : ''
-	);
+	const course = $derived(data.course);
+	const title = $derived(localized(course, 'title'));
+	const open = $derived(data.ranges.some((range) => range.seatsLeft > 0));
 	const path = (to: string) => resolve(localizeHref(to) as AppPath);
 
 	// Set up once from the page's initial form; superforms keeps it in step after that.
@@ -42,28 +42,42 @@
 			}
 		}
 	});
+
+	/** The class picked above, with its date range, for the summary. */
+	const chosen = $derived.by(() => {
+		for (const range of data.ranges) {
+			const found = range.classes.find((c) => c.id === $form.intakeId);
+			if (found) return found;
+		}
+		return null;
+	});
+	const chosenShift = $derived(
+		chosen?.shiftName
+			? localized({ name: chosen.shiftName, nameAm: chosen.shiftNameAm }, 'name')
+			: null
+	);
 </script>
 
 <svelte:head>
-	<title>{intake ? m.reg_meta_title({ course: title }) : m.reg_unavailable_heading()}</title>
+	<title>{open ? m.reg_meta_title({ course: title }) : m.reg_unavailable_heading()}</title>
 	<meta name="robots" content="noindex" />
 </svelte:head>
 
 <div class="mx-auto max-w-5xl px-4 pt-8 pb-24 sm:px-8 sm:pt-12">
-	{#if !intake}
+	{#if !open}
 		<div class="mx-auto max-w-xl py-16 text-center">
 			<h1 class="display text-3xl font-bold sm:text-4xl">{m.reg_unavailable_heading()}</h1>
-			<p class="mt-4 text-muted-foreground">{m.reg_unavailable_body()}</p>
+			<p class="mt-4 text-muted-foreground">{m.reg_no_classes()}</p>
 			<a
-				href={path('/school')}
+				href={path(`/school/${course.slug}`)}
 				class="mt-8 inline-flex h-12 items-center rounded-full bg-foreground px-7 text-sm font-semibold text-background"
 			>
-				{m.school_back()}
+				{title}
 			</a>
 		</div>
 	{:else}
 		<a
-			href={path(`/school/${intake.courseSlug}`)}
+			href={path(`/school/${course.slug}`)}
 			class="rise group inline-flex items-center gap-2 text-sm font-semibold text-muted-foreground hover:text-foreground"
 			style="--i: 0"
 		>
@@ -91,18 +105,33 @@
 				style="--i: 4"
 			>
 				<section class="flex flex-col gap-4">
+					<div>
+						<h2 class="display text-xl font-bold">{m.reg_pick_heading()}</h2>
+						<p class="mt-1 text-sm text-muted-foreground">
+							{m.reg_pick_hint({ days: course.days })}
+						</p>
+					</div>
+					<ClassPicker
+						ranges={data.ranges}
+						days={course.days}
+						bind:value={$form.intakeId}
+						error={$errors.intakeId}
+					/>
+				</section>
+
+				<section class="flex flex-col gap-4">
 					<h2 class="display text-xl font-bold">{m.reg_details()}</h2>
 					<ContactFields {form} {errors} phoneHint={m.reg_phone_hint()} />
 				</section>
 
 				<section class="flex flex-col gap-5">
-					<PaymentMethodFields {form} {errors} accounts={data.accounts} total={intake.fee} />
+					<PaymentMethodFields {form} {errors} accounts={data.accounts} total={course.fee} />
 				</section>
 
 				<div>
 					<button
 						type="submit"
-						disabled={$delayed || intake.seatsLeft <= 0}
+						disabled={$delayed || !chosen || chosen.seatsLeft <= 0}
 						class="btn-shine h-13 w-full rounded-full bg-[var(--am-ribbon)] px-7 text-[0.95rem] font-semibold text-white shadow-[0_14px_34px_-14px_var(--am-ribbon)] transition-transform duration-300 enabled:hover:-translate-y-0.5 disabled:opacity-60 sm:w-auto"
 					>
 						{#if $delayed}
@@ -110,7 +139,7 @@
 						{:else if $form.method === 'transfer'}
 							{m.reg_send_receipt()}
 						{:else}
-							{m.checkout_pay_chapa({ total: birr(intake.fee) })}
+							{m.checkout_pay_chapa({ total: birr(course.fee) })}
 						{/if}
 					</button>
 					<p class="mt-3 text-sm text-muted-foreground">
@@ -135,21 +164,36 @@
 							class="mt-0.5 h-4 w-4 shrink-0 text-[var(--am-ribbon)]"
 							aria-hidden="true"
 						/>
-						<span>
-							<span class="font-semibold"
-								>{m.school_starts()}: {bothCalendarsOnDay(intake.startDate)}</span
-							>
-							{#if intake.scheduleText}
-								<span class="block text-muted-foreground">{intake.scheduleText}</span>
-							{/if}
-						</span>
+						{#if chosen}
+							<span>
+								<span class="font-semibold"
+									>{m.school_starts()}: {bothCalendarsOnDay(chosen.startDate)}</span
+								>
+								{#if chosen.endDate}
+									<span class="block text-muted-foreground"
+										>{m.school_ends()}: {bothCalendarsOnDay(chosen.endDate)}</span
+									>
+								{/if}
+								{#if chosenShift}
+									<span class="block text-muted-foreground"
+										>{m.reg_shift()}: {chosenShift}{chosen.shiftTime
+											? `, ${chosen.shiftTime}`
+											: ''}</span
+									>
+								{/if}
+							</span>
+						{:else}
+							<span class="text-muted-foreground">{m.reg_class_none_chosen()}</span>
+						{/if}
 					</p>
 
-					<div class="mt-4"><SeatsLeft count={intake.seatsLeft} /></div>
+					{#if chosen}
+						<div class="mt-4"><SeatsLeft count={chosen.seatsLeft} /></div>
+					{/if}
 
 					<div class="mt-6 flex items-baseline justify-between border-t border-border pt-4">
 						<span class="text-sm text-muted-foreground">{m.reg_fee()}</span>
-						<span class="display text-2xl font-bold tabular-nums">{birr(intake.fee)}</span>
+						<span class="display text-2xl font-bold tabular-nums">{birr(course.fee)}</span>
 					</div>
 					<p class="mt-4 flex items-start gap-2 text-xs text-muted-foreground">
 						<Lock class="mt-0.5 h-3.5 w-3.5 shrink-0" aria-hidden="true" />

@@ -581,7 +581,9 @@
 				{m.home_school_body()}
 			</p>
 			<a
-				href={data.intake ? path(`/school/register/${data.intake.id}`) : path('/school')}
+				href={data.intake
+					? path(`/school/${data.intake.courseSlug}/register?class=${data.intake.id}`)
+					: path('/school')}
 				class="btn-shine group relative mt-8 inline-flex h-13 items-center gap-2 overflow-hidden rounded-full bg-foreground px-7 text-[0.95rem] font-semibold text-background transition-transform duration-300 hover:-translate-y-0.5"
 			>
 				{data.intake ? m.home_school_cta() : m.home_biz_school_cta()}

@@ -21,6 +21,7 @@ import {
 	stockOf
 } from '$lib/server/testing/db';
 import { createFromCart, expireHolds, orderPayable, setOrderStatus } from './orders';
+import { move } from './stock';
 
 beforeEach(resetDb);
 
@@ -472,10 +473,7 @@ describe('setOrderStatus', () => {
 		expect((await orderRow(placed.id)).status).toBe('paid_unfulfillable');
 
 		// A delivery arrives; now the rebooking goes through.
-		await db
-			.update((await import('$lib/server/db/schema')).product)
-			.set({ stockQty: 4 })
-			.where(eq((await import('$lib/server/db/schema')).product.id, gift));
+		await db.transaction((tx) => move(tx, { productId: gift, delta: 4, reason: 'delivery' }));
 		await setOrderStatus(placed.id, 'preparing', actorFor(null));
 		expect((await orderRow(placed.id)).status).toBe('preparing');
 		expect(await stockOf(gift)).toBe(3);

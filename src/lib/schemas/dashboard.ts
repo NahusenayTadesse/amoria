@@ -36,6 +36,11 @@ export const stockAdjustSchema = z
 	.object({
 		/** Set by the stock page, where one dialog serves every row; the product page uses its URL. */
 		productId: z.coerce.number().int().optional(),
+		/** Where the change happens; empty is the shop floor. */
+		locationId: z.preprocess(
+			(v) => (v === '' || v === null || v === undefined || v === '0' || v === 0 ? undefined : v),
+			z.coerce.number().int().positive().optional()
+		),
 		mode: z.enum(['move', 'count']).default('move'),
 		reason: z.enum(MANUAL_REASONS as [string, ...string[]]).default('delivery'),
 		qty: z.coerce.number().int().default(0),

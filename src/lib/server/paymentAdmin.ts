@@ -23,7 +23,10 @@ import { manualPaymentSchema, paymentIdSchema, rejectReceiptSchema } from '$lib/
 
 /** The staff member, for the audit trail. */
 export const actorOf = (event: { locals: App.Locals; getClientAddress: () => string }): Actor => ({
-	locals: { user: event.locals.user ? { id: event.locals.user.id } : null },
+	locals: {
+		user: event.locals.user ? { id: event.locals.user.id } : null,
+		isSuperAdmin: event.locals.isSuperAdmin
+	},
 	getClientAddress: event.getClientAddress
 });
 

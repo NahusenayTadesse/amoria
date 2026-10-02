@@ -4,6 +4,7 @@
 	import DataTable from '@nahu/admin-kit/components/Table/data-table.svelte';
 	import DataTableLinks from '@nahu/admin-kit/components/Table/data-table-links.svelte';
 	import Statuses from '@nahu/admin-kit/components/Table/statuses.svelte';
+	import { formatETB } from '@nahu/admin-kit/global';
 	import StockAdjustDialog from '$lib/components/dashboard/StockAdjustDialog.svelte';
 	import AdjustButton from './AdjustButton.svelte';
 	import StockTabs from './StockTabs.svelte';
@@ -40,7 +41,18 @@
 			header: 'Category',
 			cell: ({ row }) => row.original.category ?? '—'
 		},
-		{ accessorKey: 'stockQty', header: 'In stock' },
+		{
+			accessorKey: 'stockQty',
+			header: 'In stock',
+			meta: { align: 'right' },
+			cell: ({ row }) => `${row.original.stockQty} ${row.original.unit}`
+		},
+		{
+			accessorKey: 'worth',
+			header: 'Worth',
+			meta: { align: 'right' },
+			cell: ({ row }) => formatETB(row.original.worth)
+		},
 		{ accessorKey: 'held', header: 'Held for unpaid orders' },
 		{
 			accessorKey: 'level',
@@ -78,8 +90,10 @@
 <div class="flex flex-col gap-4">
 	<StockTabs current="levels" />
 	<p class="text-muted-foreground">
-		Everything the shop keeps, gifts and rental equipment alike. Sales take stock when an order is
-		placed and give it back if it is not paid in time; everything else is recorded here.
+		Everything the company keeps: gifts, rental equipment and materials. "In stock" is what can be
+		sold or issued, across every location except quarantine. Online sales take stock when an order
+		is placed and give it back if it is not paid in time; the till, deliveries, issues and counts
+		are under Documents.
 	</p>
 
 	{#key data.rows}
@@ -102,6 +116,7 @@
 		productId={adjusting.id}
 		productName={adjusting.name}
 		onHand={adjusting.stockQty}
+		locations={data.locations}
 		bind:open={adjustOpen}
 		hideTrigger
 	/>

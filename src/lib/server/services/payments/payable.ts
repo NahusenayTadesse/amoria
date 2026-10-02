@@ -54,6 +54,6 @@ export interface Payable {
  * reads. Services take this rather than a whole `RequestEvent` (§6).
  */
 export type Actor = {
-	locals: { user?: { id: string } | null };
+	locals: { user?: { id: string } | null; isSuperAdmin?: boolean };
 	getClientAddress: () => string;
 };

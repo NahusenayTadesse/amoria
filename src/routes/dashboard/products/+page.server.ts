@@ -1,13 +1,14 @@
-import { and, asc, eq } from 'drizzle-orm';
+import { and, asc, eq, ne } from 'drizzle-orm';
 import { contentCrud } from '@nahu/admin-kit/server/crud';
 import { WriteRefused } from '@nahu/admin-kit/server/childCrud';
 import { notDeleted } from '@nahu/admin-kit/server/softDelete';
 import { db } from '$lib/server/db';
-import { category, product } from '$lib/server/db/schema';
+import { category, product, supplier } from '$lib/server/db/schema';
 import { invalidating } from '$lib/server/cache';
 import { productAdd, productEdit } from '$lib/schemas/catalog';
 import { slugify } from '$lib/slug';
 import { PRODUCT_KIND_LABELS } from '$lib/stock';
+import { supplierOptions } from '$lib/server/options';
 
 /** "Gift: Flowers" — the kind is part of the choice, since a product and its category must agree. */
 async function categoryOptions() {
@@ -39,12 +40,20 @@ const crud = contentCrud({
 			as: 'category',
 			options: categoryOptions,
 			optionsKey: 'categoryList'
+		},
+		{
+			field: 'mainSupplierId',
+			table: supplier,
+			as: 'supplier',
+			options: supplierOptions,
+			optionsKey: 'supplierList'
 		}
 	],
 	transform: async (values, _event, before) => {
 		const { published, ...row } = values;
-		// Never from the form: only `stock.move()` writes stock.
+		// Never from the form: only the ledger writes stock and the average cost.
 		delete row.stockQty;
+		delete row.avgCost;
 
 		const [cat] = await db
 			.select({ kind: category.kind })
@@ -62,9 +71,37 @@ const crud = contentCrud({
 		if (!row.slug)
 			throw new WriteRefused('slug', 'Give it a link name in Latin letters, e.g. red-rose-box');
 
-		// Only the price that applies to the kind is kept.
+		// Only the price that applies to the kind is kept. Materials are used, not sold.
 		if (row.kind === 'gift') row.dailyRate = null;
-		else row.price = null;
+		else if (row.kind === 'rental') row.price = null;
+		else {
+			row.price = null;
+			row.dailyRate = null;
+		}
+
+		// SKU and barcode are unique when given: say so under the field, not as a database error.
+		for (const key of ['sku', 'barcode'] as const) {
+			row[key] = row[key] || null;
+			if (row[key]) {
+				const [clash] = await db
+					.select({ name: product.name })
+					.from(product)
+					.where(
+						and(
+							eq(product[key], row[key]),
+							notDeleted(product),
+							before ? ne(product.id, Number(before.id)) : undefined
+						)
+					);
+				if (clash) {
+					throw new WriteRefused(
+						key,
+						`${clash.name} already has that ${key === 'sku' ? 'code' : 'barcode'}.`
+					);
+				}
+			}
+		}
+		row.mainSupplierId ??= null;
 
 		for (const key of ['nameAm', 'description', 'descriptionAm'] as const)
 			row[key] = row[key] || null;
@@ -73,7 +110,9 @@ const crud = contentCrud({
 		row.dailyRate ??= null;
 
 		// First publication stamps the date ("new arrival" is read off it); unticking hides it.
-		row.publishedAt = published ? (before?.publishedAt ?? new Date()) : null;
+		// Materials never go on the shop.
+		row.publishedAt =
+			published && row.kind !== 'material' ? (before?.publishedAt ?? new Date()) : null;
 		return row;
 	}
 });

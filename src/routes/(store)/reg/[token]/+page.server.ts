@@ -34,7 +34,9 @@ export const load = async ({ params, url }) => {
 			fee: registration.feeSnapshot,
 			phone: registration.contactPhone,
 			createdAt: registration.createdAt,
-			holdExpiresAt: registration.holdExpiresAt
+			holdExpiresAt: registration.holdExpiresAt,
+			/** Graduated with a certificate: the page links to it. */
+			graduated: registration.result === 'graduated' && Boolean(registration.certificateIssuedAt)
 		},
 		course: {
 			slug: found.courseSlug,
@@ -42,8 +44,12 @@ export const load = async ({ params, url }) => {
 			titleAm: found.courseTitleAm,
 			startDate: found.startDate,
 			endDate: found.endDate,
-			scheduleText: found.scheduleText
+			scheduleText: found.scheduleText,
+			shiftName: found.shiftName,
+			shiftNameAm: found.shiftNameAm,
+			shiftTime: found.shiftTime
 		},
+		token: params.token,
 		/** `?payment=` from the return trip: paid, failed, pending or unavailable. */
 		paymentNotice: url.searchParams.get('payment'),
 		contact: publicContact(await getSettings()),
