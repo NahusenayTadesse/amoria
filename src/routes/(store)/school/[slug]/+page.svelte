@@ -94,7 +94,7 @@
 <div class="mx-auto max-w-6xl px-4 pt-8 pb-20 sm:px-8 sm:pt-12 sm:pb-28">
 	<a
 		href={path('/school')}
-		class="rise group inline-flex items-center gap-2 text-sm font-semibold text-muted-foreground hover:text-foreground"
+		class="rise group inline-flex min-h-11 items-center gap-2 text-sm font-semibold text-muted-foreground hover:text-foreground"
 		style="--i: 0"
 	>
 		<ArrowLeft
@@ -209,7 +209,7 @@
 										{#if c.seatsLeft > 0}
 											<a
 												href={path(`/school/${course.slug}/register?class=${c.id}`)}
-												class="group inline-flex h-9 items-center gap-1.5 rounded-full bg-foreground px-4 text-xs font-semibold text-background transition-transform duration-300 hover:-translate-y-0.5"
+												class="group inline-flex h-11 items-center gap-1.5 rounded-full bg-foreground px-4 text-xs font-semibold text-background transition-transform duration-300 hover:-translate-y-0.5"
 												aria-label="{m.school_register()}: {shiftLabel(c)}, {bothCalendarsOnDay(
 													range.startDate
 												)}"
@@ -262,8 +262,8 @@
 <style>
 	.course-art {
 		background:
-			radial-gradient(circle at 25% 30%, #e0568f, transparent 55%),
-			radial-gradient(circle at 78% 72%, #d4a23a, transparent 55%), #4f2153;
+			radial-gradient(circle at 25% 30%, #2f8a5e, transparent 55%),
+			radial-gradient(circle at 78% 72%, #d4a23a, transparent 55%), #1d5b3d;
 	}
 	.timeline > li:not(:last-child)::before {
 		content: '';

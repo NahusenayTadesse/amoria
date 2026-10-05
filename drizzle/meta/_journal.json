@@ -36,6 +36,20 @@
       "when": 1790778706489,
       "tag": "0004_school_classes",
       "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "5",
+      "when": 1791233294780,
+      "tag": "0005_push_subscriptions",
+      "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "5",
+      "when": 1791233591618,
+      "tag": "0006_quote_request_client_ref",
+      "breakpoints": true
     }
   ]
 }

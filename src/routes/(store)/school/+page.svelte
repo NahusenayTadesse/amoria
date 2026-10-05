@@ -7,6 +7,7 @@
 	import { reveal } from '$lib/actions/reveal';
 	import { chatHref } from '$lib/chat';
 	import PageHero from '$lib/components/store/PageHero.svelte';
+	import PhotoArt from '$lib/components/store/PhotoArt.svelte';
 	import CourseCard from '$lib/components/store/CourseCard.svelte';
 	import ChatButtons from '$lib/components/store/ChatButtons.svelte';
 
@@ -49,6 +50,12 @@
 				aria-hidden="true"
 			/>
 		</a>
+	{/snippet}
+	{#snippet art()}
+		<PhotoArt
+			main={{ src: '/images/demo/gallery-garden-reception.webp', w: 900, h: 1350, small: 480 }}
+			side={{ src: '/images/demo/gallery-centerpiece.webp', w: 900, h: 1440, small: 480 }}
+		/>
 	{/snippet}
 </PageHero>
 

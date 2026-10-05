@@ -27,6 +27,12 @@ fetch() {
 	echo "  $dest"
 }
 
+# derive <source> <destination> <WxH>: a crop of a photo already fetched above (needs ImageMagick)
+derive() {
+	magick "$1" -resize "$3^" -gravity center -extent "$3" -quality 78 "$2"
+	echo "  $2"
+}
+
 echo "Hero floating photos"
 fetch 1523693916903-027d144a2b7d "$STATIC/hero-bouquet.webp" 480 600
 fetch 1738225734899-30852be7e396 "$STATIC/hero-aisle.webp" 480 600
@@ -57,11 +63,25 @@ fetch 1513201099705-a9746e1e201f "$UPLOADS/demo-wrapped-surprise.webp" 800 800
 
 echo "Décor packages (4:3)"
 fetch 1560128411-79892dd93bf8 "$UPLOADS/demo-pkg-birthday.webp" 1000 750
-fetch 1587271407850-8d438ca9fdf2 "$UPLOADS/demo-pkg-wedding.webp" 1000 750
+derive "$STATIC/gallery-hall-drapes.webp" "$UPLOADS/demo-pkg-wedding.webp" 1000x750
 fetch 1772127822525-7eda37383b9f "$UPLOADS/demo-pkg-engagement.webp" 1000 750
 
 echo "Portfolio (square)"
-fetch 1587271636175-90d58cdad458 "$UPLOADS/demo-pf-floral-mandap.webp" 1200 1200
+derive "$STATIC/gallery-floral-tables.webp" "$UPLOADS/demo-pf-floral-tables.webp" 1200x1200
+
+# More package photos: crops of the photos above, one per extra package in seed-dev.sql
+derive "$STATIC/gallery-ceremony-chairs.webp" "$UPLOADS/demo-pkg-wedding-aisle-and-tables.webp" 1000x750
+derive "$STATIC/gallery-long-table.webp" "$UPLOADS/demo-pkg-wedding-stage-and-tables.webp" 1000x750
+derive "$STATIC/gallery-aisle-chairs.webp" "$UPLOADS/demo-pkg-engagement-simple-corner.webp" 1000x750
+derive "$STATIC/gallery-garden-reception.webp" "$UPLOADS/demo-pkg-engagement-garden-luxury.webp" 1000x750
+derive "$STATIC/hero-cake.webp" "$UPLOADS/demo-pkg-birthday-party-studio.webp" 1000x750
+derive "$STATIC/gallery-gold-letters.webp" "$UPLOADS/demo-pkg-birthday-grand-gold.webp" 1000x750
+derive "$STATIC/hero-bouquet.webp" "$UPLOADS/demo-pkg-baby-shower-simple.webp" 1000x750
+derive "$STATIC/gallery-centerpiece.webp" "$UPLOADS/demo-pkg-baby-shower-garden.webp" 1000x750
+derive "$STATIC/hero-aisle.webp" "$UPLOADS/demo-pkg-graduation-basic.webp" 1000x750
+derive "$STATIC/gallery-table-garden.webp" "$UPLOADS/demo-pkg-graduation-party.webp" 1000x750
+derive "$STATIC/gallery-evening-hall.webp" "$UPLOADS/demo-pkg-corporate-launch.webp" 1000x750
+derive "$STATIC/gallery-hall-drapes.webp" "$UPLOADS/demo-pkg-corporate-gala.webp" 1000x750
 fetch 1747115276395-607f2e5dc269 "$UPLOADS/demo-pf-garden-arches.webp" 1000 1000
 fetch 1741969494307-55394e3e4071 "$UPLOADS/demo-pf-birthday-arch.webp" 1000 1000
 fetch 1560117531-02eeab8e3593 "$UPLOADS/demo-pf-cake-chandeliers.webp" 1000 1000
@@ -69,3 +89,17 @@ fetch 1762765684665-6b6855bb6fe6 "$UPLOADS/demo-pf-grand-banquet.webp" 1000 1000
 fetch 1717680281618-442cb9c12b6c "$UPLOADS/demo-pf-chandelier-hall.webp" 1000 1000
 
 echo "Done. Now: mariadb -u dev amoria < scripts/seed-dev.sql"
+
+# Course photos for the décor school
+derive "$UPLOADS/demo-pf-birthday-arch.webp" "$UPLOADS/demo-course-balloon-arches.webp" 1000x750
+derive "$STATIC/gallery-floral-tables.webp" "$UPLOADS/demo-course-table-styling.webp" 1000x750
+derive "$STATIC/gallery-hall-drapes.webp" "$UPLOADS/demo-course-stage-design.webp" 1000x750
+derive "$STATIC/hero-bouquet.webp" "$UPLOADS/demo-course-bouquets-wrapping.webp" 1000x750
+derive "$STATIC/hero-cake.webp" "$UPLOADS/demo-course-cake-dessert-tables.webp" 1000x750
+derive "$STATIC/gallery-long-table.webp" "$UPLOADS/demo-course-start-decor-business.webp" 1000x750
+
+# Small copies of the gallery photos (480px wide) for phones; see $lib/img.ts.
+for photo in "$STATIC"/gallery-*.webp; do
+	case "$photo" in *-480.webp) continue ;; esac
+	magick "$photo" -resize 480x -quality 72 "${photo%.webp}-480.webp"
+done

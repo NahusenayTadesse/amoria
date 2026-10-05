@@ -12,18 +12,36 @@
 	};
 
 	let { form, errors, phoneHint }: Props = $props();
+
+	/**
+	 * The kit's input does not pass `autocomplete` or `inputmode` through, so they are set here: a
+	 * phone gets the number pad and the browser's saved number, an email the @ keyboard.
+	 */
+	const HINTS: Record<string, Record<string, string>> = {
+		name: { autocomplete: 'name' },
+		phone: { autocomplete: 'tel', inputmode: 'tel' },
+		email: { autocomplete: 'email', inputmode: 'email' }
+	};
+	function hints(node: HTMLElement) {
+		for (const [field, attributes] of Object.entries(HINTS)) {
+			const input = node.querySelector(`input[name="${field}"]`);
+			for (const [key, value] of Object.entries(attributes)) input?.setAttribute(key, value);
+		}
+	}
 </script>
 
 <!-- Name and phone, then an optional email: everything a guest is asked before paying (§12.3). -->
-<InputComp {form} {errors} name="name" label={m.checkout_name()} required />
-<InputComp
-	{form}
-	{errors}
-	name="phone"
-	type="tel"
-	label={m.checkout_phone()}
-	placeholder="0911 234 567"
-	description={phoneHint ?? m.checkout_phone_hint()}
-	required
-/>
-<InputComp {form} {errors} name="email" type="email" label={m.checkout_email()} />
+<div class="contents" use:hints>
+	<InputComp {form} {errors} name="name" label={m.checkout_name()} required />
+	<InputComp
+		{form}
+		{errors}
+		name="phone"
+		type="tel"
+		label={m.checkout_phone()}
+		placeholder="0911 234 567"
+		description={phoneHint ?? m.checkout_phone_hint()}
+		required
+	/>
+	<InputComp {form} {errors} name="email" type="email" label={m.checkout_email()} />
+</div>

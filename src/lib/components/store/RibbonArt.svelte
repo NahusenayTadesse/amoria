@@ -10,25 +10,25 @@
 			<stop offset="1" stop-color="#f0d68e" />
 		</linearGradient>
 		<radialGradient id="ra-ribbon" cx="34%" cy="28%" r="80%">
-			<stop offset="0" stop-color="#e0568f" />
-			<stop offset="0.55" stop-color="#b0175a" />
-			<stop offset="1" stop-color="#7d0f40" />
+			<stop offset="0" stop-color="#2f8a5e" />
+			<stop offset="0.55" stop-color="#14543a" />
+			<stop offset="1" stop-color="#07281a" />
 		</radialGradient>
 		<radialGradient id="ra-blush" cx="34%" cy="28%" r="80%">
-			<stop offset="0" stop-color="#fff0f6" />
-			<stop offset="0.55" stop-color="#f4bcd4" />
+			<stop offset="0" stop-color="#eef7f0" />
+			<stop offset="0.55" stop-color="#bfdcc9" />
 			<stop offset="1" stop-color="#dc92b4" />
 		</radialGradient>
 		<radialGradient id="ra-plum" cx="34%" cy="28%" r="80%">
-			<stop offset="0" stop-color="#8a4a8e" />
-			<stop offset="0.55" stop-color="#4f2153" />
-			<stop offset="1" stop-color="#2e1330" />
+			<stop offset="0" stop-color="#3f8a63" />
+			<stop offset="0.55" stop-color="#1d5b3d" />
+			<stop offset="1" stop-color="#0c2a1d" />
 		</radialGradient>
 		<path id="ra-spark" d="M0 -11 Q0.8 -0.8 11 0 Q0.8 0.8 0 11 Q-0.8 0.8 -11 0 Q-0.8 -0.8 0 -11Z" />
 	</defs>
 
 	<!-- Strings, then the ribbon that ties them. -->
-	<g class="strings" fill="none" stroke="#2e1330" stroke-opacity="0.35" stroke-width="1.2">
+	<g class="strings" fill="none" stroke="#0c2a1d" stroke-opacity="0.35" stroke-width="1.2">
 		<path d="M120 190 C140 260 180 300 210 330" pathLength="1" class="draw" />
 		<path d="M230 130 C230 220 214 290 210 330" pathLength="1" class="draw d2" />
 		<path d="M320 200 C300 270 240 310 210 330" pathLength="1" class="draw d3" />
@@ -45,7 +45,7 @@
 	<path
 		d="M40 380 C120 300 90 230 190 250 C290 270 250 350 340 300 C380 278 390 240 380 210"
 		fill="none"
-		stroke="#b0175a"
+		stroke="#14543a"
 		stroke-width="2"
 		stroke-linecap="round"
 		stroke-dasharray="1 14"

@@ -9,6 +9,7 @@
 	import { birr, bothCalendars, bothCalendarsOnDay, bothClocks, localized } from '$lib/localized';
 	import ChatButtons from '$lib/components/store/ChatButtons.svelte';
 	import PayPanel from '$lib/components/store/PayPanel.svelte';
+	import PushOptIn from '$lib/components/store/PushOptIn.svelte';
 	import StatusPill from '$lib/components/store/StatusPill.svelte';
 
 	let { data, form: actionData } = $props();
@@ -87,6 +88,7 @@
 		<h1 class="display text-3xl font-bold sm:text-4xl">{m.reg_status_heading({ ref: reg.ref })}</h1>
 		<StatusPill label={status.label} tone={status.tone} />
 	</div>
+	<PushOptIn kind="registration" />
 
 	{#if now}
 		<p class="mt-5 text-lg">{now}</p>

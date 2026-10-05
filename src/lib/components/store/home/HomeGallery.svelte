@@ -4,7 +4,7 @@
 	own before launch.
 -->
 <script lang="ts">
-	import { asset } from '$app/paths';
+	import { responsive } from '$lib/img';
 	import { m } from '$lib/paraglide/messages.js';
 	import { reveal } from '$lib/actions/reveal';
 
@@ -40,10 +40,17 @@
 
 		<ul class="mt-10 columns-2 gap-3 sm:mt-14 sm:gap-5 lg:columns-3">
 			{#each photos as photo, index (photo.name)}
-				<li use:reveal style="--i: {index % 3}" class="mb-3 break-inside-avoid sm:mb-5">
+				{@const img = responsive(`/images/demo/${photo.name}.webp`, 480, 900)}
+				<li
+					use:reveal
+					style="--i: {index % 3}"
+					class={['mb-3 break-inside-avoid sm:mb-5', index >= 6 && 'max-sm:hidden']}
+				>
 					<figure class="group relative overflow-hidden rounded-[1.1rem] bg-white/5">
 						<img
-							src={asset(`/images/demo/${photo.name}.webp`)}
+							src={img.src}
+							srcset={img.srcset}
+							sizes="(min-width: 1024px) 380px, 50vw"
 							alt={photo.caption()}
 							width={photo.w}
 							height={photo.h}

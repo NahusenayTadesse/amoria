@@ -160,6 +160,9 @@ export const PAYMENT_PURPOSES = [
 	'registration'
 ] as const;
 
+/** What a push subscription follows: an order, or a class registration. */
+export const PUSH_TARGETS = ['order', 'registration'] as const;
+
 export const PAYMENT_STATUSES = ['initiated', 'success', 'failed', 'cancelled'] as const;
 
 export const MESSAGE_CHANNELS = ['sms', 'email', 'telegram'] as const;

@@ -3,16 +3,16 @@
  * the kit's own variables so kit components (inputs, sheet, buttons) pick it up without a fork.
  * Anything portalled out of the page (the checkout sheet) carries `.store` itself.
  *
- * Gift-wrap colours: plum ink, ribbon magenta, gold foil on a lilac tissue-paper ground. Swap the
- * five `--am-*` values for Amoria's brand colours once they supply them; nothing else refers to
- * a colour directly.
+ * Amoria's brand colours, taken from the logo: deep forest green and metallic gold on a warm
+ * cream ground. Change the `--am-*` values to retheme; nothing else refers to a colour directly.
  */
 .store {
-	--am-ink: #2e1330;
-	--am-ribbon: #b0175a;
+	--am-ink: #0c2a1d;
+	--am-ribbon: #14543a;
 	--am-foil: #b8892b;
-	--am-tissue: #fbf7fb;
-	--am-muted: #6f5f72;
+	--am-gold: #e3bd62;
+	--am-tissue: #fbf8ef;
+	--am-muted: #5b6a60;
 
 	--background: var(--am-tissue);
 	--foreground: var(--am-ink);
@@ -22,14 +22,14 @@
 	--popover-foreground: var(--am-ink);
 	--primary: var(--am-ribbon);
 	--primary-foreground: #ffffff;
-	--secondary: #f1e6f0;
+	--secondary: #eee9d4;
 	--secondary-foreground: var(--am-ink);
-	--muted: #f1e6f0;
+	--muted: #eee9d4;
 	--muted-foreground: var(--am-muted);
-	--accent: #f1e6f0;
+	--accent: #eee9d4;
 	--accent-foreground: var(--am-ink);
-	--border: #e6d6e4;
-	--input: #dcc8d9;
+	--border: #e0dac3;
+	--input: #d3ccb0;
 	--ring: color-mix(in oklab, var(--am-ribbon) 45%, transparent);
 	--radius: 0.75rem;
 
@@ -166,5 +166,48 @@
 	.store .line-in,
 	.store .rise {
 		animation: none;
+	}
+}
+
+/* ---------- App feel (installed or not) ---------- */
+html {
+	-webkit-tap-highlight-color: transparent;
+	overscroll-behavior-x: none;
+}
+a,
+button,
+summary {
+	touch-action: manipulation;
+}
+/* The header stays put while the page behind it cross-fades. */
+.site-header {
+	view-transition-name: site-header;
+}
+::view-transition-old(root),
+::view-transition-new(root) {
+	animation-duration: 0.18s;
+}
+/* Installed: it is an app, so no text-selection handles on the chrome and no iOS long-press menus. */
+@media (display-mode: standalone) {
+	.site-header,
+	nav {
+		-webkit-user-select: none;
+		user-select: none;
+		-webkit-touch-callout: none;
+	}
+}
+
+/* Pressed feedback: a tap should answer at once, which hover styles cannot do on a touch screen. */
+.store :is(a, button):not(:disabled)[class*='rounded-full'],
+.store :is(a, button):not(:disabled)[class*='rounded-2xl'] {
+	transition: scale 0.12s;
+}
+.store :is(a, button):not(:disabled)[class*='rounded-full']:active,
+.store :is(a, button):not(:disabled)[class*='rounded-2xl']:active {
+	scale: 0.97;
+}
+@media (prefers-reduced-motion: reduce) {
+	.store :is(a, button):active {
+		scale: none !important;
 	}
 }

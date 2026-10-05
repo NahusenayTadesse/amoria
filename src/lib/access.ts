@@ -29,6 +29,7 @@ export const access = createAccess({
 		{ prefix: '/dashboard/import', permission: 'data.import' },
 		{ prefix: '/dashboard/labels', permission: 'catalog.manage' },
 		{ prefix: '/dashboard/school', permission: 'school.manage' },
+		{ prefix: '/dashboard/quote-requests', permission: 'quotes.manage' },
 		{ prefix: '/dashboard/settings', permission: 'settings.manage' }
 	]
 });

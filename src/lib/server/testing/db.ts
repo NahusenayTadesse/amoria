@@ -53,6 +53,7 @@ const TABLES = [
 	'quote',
 	'quote_request',
 	'registration',
+	'push_subscription',
 	'course_intake',
 	'course_image',
 	'course',

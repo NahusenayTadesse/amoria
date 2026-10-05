@@ -4,13 +4,56 @@
 	<head>
 		<meta charset="utf-8" />
 
-		<meta name="viewport" content="width=device-width, initial-scale=1" />
+		<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+
+		<link rel="manifest" href="/manifest.webmanifest" />
+		<meta name="theme-color" content="#0c2a1d" />
+		<meta name="mobile-web-app-capable" content="yes" />
+		<meta name="apple-mobile-web-app-capable" content="yes" />
+		<meta name="apple-mobile-web-app-title" content="Amoria" />
+		<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+		<link rel="apple-touch-icon" href="/brand/icons/apple-touch-icon.png" />
+		<link
+			rel="apple-touch-startup-image"
+			media="(device-width: 430px) and (device-height: 932px) and (-webkit-device-pixel-ratio: 3) and (orientation: portrait)"
+			href="/brand/splash/1290x2796.png"
+		/>
+		<link
+			rel="apple-touch-startup-image"
+			media="(device-width: 393px) and (device-height: 852px) and (-webkit-device-pixel-ratio: 3) and (orientation: portrait)"
+			href="/brand/splash/1179x2556.png"
+		/>
+		<link
+			rel="apple-touch-startup-image"
+			media="(device-width: 428px) and (device-height: 926px) and (-webkit-device-pixel-ratio: 3) and (orientation: portrait)"
+			href="/brand/splash/1284x2778.png"
+		/>
+		<link
+			rel="apple-touch-startup-image"
+			media="(device-width: 390px) and (device-height: 844px) and (-webkit-device-pixel-ratio: 3) and (orientation: portrait)"
+			href="/brand/splash/1170x2532.png"
+		/>
+		<link
+			rel="apple-touch-startup-image"
+			media="(device-width: 375px) and (device-height: 812px) and (-webkit-device-pixel-ratio: 3) and (orientation: portrait)"
+			href="/brand/splash/1125x2436.png"
+		/>
+		<link
+			rel="apple-touch-startup-image"
+			media="(device-width: 414px) and (device-height: 896px) and (-webkit-device-pixel-ratio: 2) and (orientation: portrait)"
+			href="/brand/splash/828x1792.png"
+		/>
+		<link
+			rel="apple-touch-startup-image"
+			media="(device-width: 375px) and (device-height: 667px) and (-webkit-device-pixel-ratio: 2) and (orientation: portrait)"
+			href="/brand/splash/750x1334.png"
+		/>
 
 		<meta name="text-scale" content="scale" />
 		%sveltekit.head%
 	</head>
 
-	<body data-sveltekit-preload-data="hover">
+	<body data-sveltekit-preload-data="tap">
 		<div style="display: contents">%sveltekit.body%</div>
 	</body>
 </html>

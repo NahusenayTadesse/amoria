@@ -31,6 +31,7 @@ export const DESCRIPTIONS: Record<string, string> = {
 	'orders.manage': 'Move orders along (preparing, ready, completed) and cancel them',
 	'payments.record': 'Confirm or reject transfer receipts, and record cash payments',
 	'catalog.manage': 'Add and change products, their photos, prices and categories',
+	'quotes.manage': 'See requests for quotes and move them along (contacted, quoted, won, lost)',
 	'school.manage': 'Add and change courses, intakes and photos, and handle student registrations',
 	'stock.view': 'See stock levels, the stock ledger and what is expiring',
 	'stock.adjust':

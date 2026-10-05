@@ -61,7 +61,7 @@ function syncPermissionsOnce() {
 }
 
 /** Paths that never need to know who is asking (§3.3: session lookups off the DB). */
-const ANONYMOUS_PATHS = ['/media/', '/api/payments/', '/api/jobs/'];
+const ANONYMOUS_PATHS = ['/media/', '/api/payments/', '/api/jobs/', '/api/push'];
 
 const handleBetterAuth: Handle = async ({ event, resolve }) => {
 	if (ANONYMOUS_PATHS.some((path) => event.url.pathname.startsWith(path))) return resolve(event);

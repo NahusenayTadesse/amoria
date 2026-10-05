@@ -1,4 +1,5 @@
 import { and, asc, count, desc, eq, gte, inArray, lt, or, isNull, gt } from 'drizzle-orm';
+import { notifyRegistration } from './push';
 import type { SQL } from 'drizzle-orm';
 import type { Writer } from '@nahu/admin-kit/server/db';
 import { insertReturningId } from '@nahu/admin-kit/server/db/insert';
@@ -532,6 +533,7 @@ export async function setRegistrationStatus(
 		});
 	});
 	invalidate('catalog');
+	if (to === 'confirmed' || to === 'cancelled') void notifyRegistration(registrationId, to);
 }
 
 /**
@@ -782,6 +784,7 @@ export async function setResult(registrationId: number, result: RegistrationResu
 			after: { result }
 		});
 	});
+	if (result !== 'pending') void notifyRegistration(registrationId, result);
 }
 
 /** What a printed certificate says. Null unless the student graduated. */

@@ -18,14 +18,14 @@ const gift = (overrides: Record<string, unknown> = {}) => ({
 	...overrides
 });
 
-function renderCard(product = gift(), onbuy = vi.fn()) {
+function renderCard(product = gift(), onopen = vi.fn()) {
 	const bag = new Bag(() => [product]);
 	render(WithBag, {
 		bag,
 		component: ProductCard as unknown as Component<Record<string, unknown>>,
-		innerProps: { product, onbuy }
+		innerProps: { product, onopen }
 	});
-	return { bag, onbuy };
+	return { bag, onopen };
 }
 
 beforeEach(() => localStorage.clear());
@@ -39,18 +39,15 @@ describe('ProductCard', () => {
 		await expect.element(page.getByText('ETB 1,450.00')).toBeInTheDocument();
 	});
 
-	it('Buy now puts the gift in the bag once and opens checkout', async () => {
-		const { bag, onbuy } = renderCard();
-		const buy = page.getByRole('button', { name: 'Buy Red rose bouquet now' });
-		await buy.click();
-		await buy.click();
-		expect(onbuy).toHaveBeenCalledTimes(2);
-		expect(bag.qtyOf(1)).toBe(1); // not 2: buying again goes to checkout, it does not add more
+	it('tapping the photo opens the product sheet', async () => {
+		const { onopen } = renderCard();
+		await page.getByRole('button', { name: 'Red rose bouquet: see details' }).click();
+		expect(onopen).toHaveBeenCalledOnce();
 	});
 
-	it('Add to bag turns into a stepper that stops at the stock', async () => {
+	it('the + button turns into a stepper that stops at the stock', async () => {
 		const { bag } = renderCard(gift({ stockQty: 2 }));
-		await page.getByRole('button', { name: 'Add to bag' }).click();
+		await page.getByRole('button', { name: 'Add Red rose bouquet to bag' }).click();
 		const more = page.getByRole('button', { name: 'One more Red rose bouquet' });
 		await more.click();
 		expect(bag.qtyOf(1)).toBe(2);
@@ -59,13 +56,15 @@ describe('ProductCard', () => {
 		await page.getByRole('button', { name: 'One fewer Red rose bouquet' }).click();
 		await page.getByRole('button', { name: 'One fewer Red rose bouquet' }).click();
 		expect(bag.qtyOf(1)).toBe(0);
-		await expect.element(page.getByRole('button', { name: 'Add to bag' })).toBeInTheDocument();
+		await expect
+			.element(page.getByRole('button', { name: 'Add Red rose bouquet to bag' }))
+			.toBeInTheDocument();
 	});
 
-	it('says sold out and offers no buttons when there is no stock', async () => {
+	it('says sold out and offers no way to add when there is no stock', async () => {
 		renderCard(gift({ stockQty: 0 }));
 		await expect.element(page.getByText('Sold out')).toBeInTheDocument();
-		expect(page.getByRole('button').elements()).toHaveLength(0);
+		expect(page.getByRole('button', { name: /Add .* to bag/ }).elements()).toHaveLength(0);
 	});
 
 	it('warns when only a few are left', async () => {

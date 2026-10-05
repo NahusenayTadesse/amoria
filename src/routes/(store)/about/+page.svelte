@@ -10,7 +10,8 @@
 	import { localizeHref } from '$lib/paraglide/runtime';
 	import { reveal } from '$lib/actions/reveal';
 	import PageHero from '$lib/components/store/PageHero.svelte';
-	import RibbonArt from '$lib/components/store/RibbonArt.svelte';
+	import PhotoArt from '$lib/components/store/PhotoArt.svelte';
+	import VisitBand from '$lib/components/store/VisitBand.svelte';
 
 	const path = (to: string) => resolve(localizeHref(to) as AppPath);
 
@@ -44,7 +45,10 @@
 	lede={m.about_lede()}
 >
 	{#snippet art()}
-		<div class="aspect-square"><RibbonArt /></div>
+		<PhotoArt
+			main={{ src: '/images/shop/shopfront.webp', w: 1280, h: 960, small: 640 }}
+			side={{ src: '/images/demo/gallery-floral-tables.webp', w: 900, h: 601, small: 480 }}
+		/>
 	{/snippet}
 </PageHero>
 
@@ -143,6 +147,9 @@
 		{/each}
 	</ul>
 </section>
+
+<!-- The shop -->
+<VisitBand />
 
 <!-- Call to action -->
 <section class="cta relative isolate overflow-hidden bg-[var(--am-ribbon)] text-white">

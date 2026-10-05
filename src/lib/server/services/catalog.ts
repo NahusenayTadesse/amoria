@@ -54,6 +54,8 @@ export type ShopProduct = {
 	publishedAt: string;
 	image: string | null;
 	imageAlt: string | null;
+	/** Every photo, in order, for the product sheet's gallery (the first is `image`). */
+	gallery: { fileName: string; alt: string | null }[];
 };
 
 /**
@@ -82,22 +84,24 @@ export function giftProducts(): Promise<ShopProduct[]> {
 			.where(and(eq(product.kind, 'gift'), isNotNull(product.price), visible()))
 			.orderBy(desc(product.isFeatured), asc(product.sortOrder), desc(product.publishedAt));
 
-		const images = await firstImages(rows.map((row) => row.id));
+		const { byProduct: images, gallery } = await firstImages(rows.map((row) => row.id));
 
 		return rows.map((row) => ({
 			...row,
 			price: row.price ?? 0,
 			publishedAt: row.publishedAt!.toISOString(),
 			image: images.get(row.id)?.fileName ?? null,
-			imageAlt: images.get(row.id)?.alt ?? null
+			imageAlt: images.get(row.id)?.alt ?? null,
+			gallery: gallery.get(row.id) ?? []
 		}));
 	});
 }
 
-/** The lowest-`sortOrder` image of each product, in one query (no N+1). */
+/** Each product's images in order, in one query (no N+1); the first is its cover. */
 async function firstImages(productIds: number[]) {
 	const byProduct = new Map<number, { fileName: string; alt: string | null }>();
-	if (!productIds.length) return byProduct;
+	const gallery = new Map<number, { fileName: string; alt: string | null }[]>();
+	if (!productIds.length) return { byProduct, gallery };
 
 	const rows = await db
 		.select({
@@ -111,6 +115,9 @@ async function firstImages(productIds: number[]) {
 
 	for (const row of rows) {
 		if (!byProduct.has(row.productId)) byProduct.set(row.productId, row);
+		const list = gallery.get(row.productId) ?? [];
+		list.push({ fileName: row.fileName, alt: row.alt });
+		gallery.set(row.productId, list);
 	}
-	return byProduct;
+	return { byProduct, gallery };
 }

@@ -110,8 +110,8 @@
 <style>
 	.course-art {
 		background:
-			radial-gradient(circle at 25% 30%, #e0568f, transparent 55%),
-			radial-gradient(circle at 78% 72%, #d4a23a, transparent 55%), #4f2153;
+			radial-gradient(circle at 25% 30%, #2f8a5e, transparent 55%),
+			radial-gradient(circle at 78% 72%, #d4a23a, transparent 55%), #1d5b3d;
 		transition: transform 0.9s ease;
 	}
 	.course:hover .course-art {

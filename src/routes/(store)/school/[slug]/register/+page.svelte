@@ -8,7 +8,7 @@
 	import { createForm } from '@nahu/admin-kit/forms/createForm';
 	import { m } from '$lib/paraglide/messages.js';
 	import { localizeHref } from '$lib/paraglide/runtime';
-	import { birr, bothCalendarsOnDay, localized } from '$lib/localized';
+	import { birr, bothCalendarsOnDay, localized, shortDay } from '$lib/localized';
 	import { registrationSchema } from '$lib/schemas/school';
 	import ContactFields from '$lib/components/store/ContactFields.svelte';
 	import PaymentMethodFields from '$lib/components/store/PaymentMethodFields.svelte';
@@ -63,7 +63,7 @@
 	<meta name="robots" content="noindex" />
 </svelte:head>
 
-<div class="mx-auto max-w-5xl px-4 pt-8 pb-24 sm:px-8 sm:pt-12">
+<div class="mx-auto max-w-5xl px-4 pt-6 pb-36 sm:px-8 sm:pt-12 lg:pb-24">
 	{#if !open}
 		<div class="mx-auto max-w-xl py-16 text-center">
 			<h1 class="display text-3xl font-bold sm:text-4xl">{m.reg_unavailable_heading()}</h1>
@@ -78,7 +78,7 @@
 	{:else}
 		<a
 			href={path(`/school/${course.slug}`)}
-			class="rise group inline-flex items-center gap-2 text-sm font-semibold text-muted-foreground hover:text-foreground"
+			class="rise group inline-flex min-h-11 items-center gap-2 text-sm font-semibold text-muted-foreground hover:text-foreground"
 			style="--i: 0"
 		>
 			<ArrowLeft
@@ -95,13 +95,14 @@
 		</h1>
 		<p class="rise mt-3 max-w-[52ch] text-muted-foreground" style="--i: 3">{m.reg_intro()}</p>
 
-		<div class="mt-8 grid gap-8 lg:grid-cols-[1.2fr_0.8fr] lg:gap-12">
+		<div class="mt-8 grid grid-cols-1 gap-8 lg:grid-cols-[1.2fr_0.8fr] lg:gap-12">
 			<form
+				id="register-form"
 				method="POST"
 				action="?/register"
 				enctype="multipart/form-data"
 				use:enhance
-				class="rise order-2 flex flex-col gap-6 lg:order-1"
+				class="rise order-2 flex min-w-0 flex-col gap-6 lg:order-1"
 				style="--i: 4"
 			>
 				<section class="flex flex-col gap-4">
@@ -128,7 +129,7 @@
 					<PaymentMethodFields {form} {errors} accounts={data.accounts} total={course.fee} />
 				</section>
 
-				<div>
+				<div class="max-lg:hidden">
 					<button
 						type="submit"
 						disabled={$delayed || !chosen || chosen.seatsLeft <= 0}
@@ -149,7 +150,7 @@
 			</form>
 
 			<!-- The seat, as it will be held: what, when, how much, and for how long. -->
-			<aside class="order-1 lg:order-2">
+			<aside class="order-1 max-lg:hidden lg:order-2">
 				<div
 					class="rise summary sticky top-24 overflow-hidden rounded-[1.75rem] border border-border bg-card p-6 sm:p-7"
 					style="--i: 3"
@@ -204,3 +205,35 @@
 		</div>
 	{/if}
 </div>
+
+{#if open}
+	<!-- Phones: the fee and the pay button stay in reach, where the summary card is on wide screens. -->
+	<div
+		class="fixed inset-x-0 bottom-0 z-40 flex items-center gap-3 border-t border-border bg-background px-4 pt-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] lg:hidden"
+	>
+		<div class="min-w-0 flex-1 leading-tight">
+			<p class="truncate text-sm font-semibold">
+				{#if chosen}
+					{shortDay(chosen.startDate)}{chosenShift ? ` · ${chosenShift}` : ''}
+				{:else}
+					<span class="text-muted-foreground">{m.reg_class_none_chosen()}</span>
+				{/if}
+			</p>
+			<p class="display text-lg font-bold tabular-nums">{birr(course.fee)}</p>
+		</div>
+		<button
+			type="submit"
+			form="register-form"
+			disabled={$delayed || !chosen || chosen.seatsLeft <= 0}
+			class="h-12 shrink-0 rounded-full bg-[var(--am-ribbon)] px-6 text-sm font-semibold text-white active:scale-[0.98] disabled:opacity-60"
+		>
+			{#if $delayed}
+				{m.reg_registering()}…
+			{:else if $form.method === 'transfer'}
+				{m.reg_send_receipt()}
+			{:else}
+				{m.checkout_pay_chapa({ total: birr(course.fee) })}
+			{/if}
+		</button>
+	</div>
+{/if}

@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
 	import { page } from '$app/state';
-	import { replaceState } from '$app/navigation';
+	import { pushState, replaceState } from '$app/navigation';
 	import { resolve } from '$app/paths';
 	import type { AppPath } from '$lib/paths';
 	import { localizeHref } from '$lib/paraglide/runtime';
@@ -10,6 +10,7 @@
 	import { Bag, setBag } from '$lib/components/store/bag.svelte';
 	import ProductCard from '$lib/components/store/ProductCard.svelte';
 	import BagBar from '$lib/components/store/BagBar.svelte';
+	import ProductSheet from '$lib/components/store/ProductSheet.svelte';
 	import CheckoutSheet from '$lib/components/store/CheckoutSheet.svelte';
 
 	let { data } = $props();
@@ -18,6 +19,24 @@
 	setBag(bag);
 
 	let checkoutOpen = $state(false);
+
+	/** The product whose sheet is open: shallow-routing state, so Back closes it. */
+	const opened = $derived(
+		page.state.sheet === 'product'
+			? data.products.find((p) => p.id === page.state.productId)
+			: undefined
+	);
+
+	/** The tab bar's Bag tab links to `?bag=1`: open checkout if there is anything to check out. */
+	$effect(() => {
+		if (!page.url.searchParams.has('bag')) return;
+		if (bag.count > 0) checkoutOpen = true;
+		const rest = [...page.url.searchParams].filter(([key]) => key !== 'bag');
+		const query = rest.length
+			? `?${rest.map(([k, v]) => `${encodeURIComponent(k)}=${encodeURIComponent(v)}`).join('&')}`
+			: '';
+		replaceState(resolve(`${page.url.pathname}${query}` as AppPath), page.state);
+	});
 
 	const shown = $derived(
 		data.activeCategoryId === null
@@ -62,7 +81,7 @@
 	{#if data.categories.length > 1}
 		<nav
 			aria-label={m.shop_filter_label()}
-			class="-mx-4 mt-8 [scrollbar-width:none] overflow-x-auto px-4 sm:mx-0 sm:px-0 [&::-webkit-scrollbar]:hidden"
+			class="chips sticky z-20 -mx-4 mt-8 [scrollbar-width:none] overflow-x-auto bg-background/95 px-4 py-2 backdrop-blur sm:static sm:mx-0 sm:px-0 [&::-webkit-scrollbar]:hidden"
 		>
 			<ul class="flex w-max gap-2">
 				{#each [{ id: null, slug: '', label: m.shop_filter_all() }, ...data.categories.map( (c) => ({ id: c.id, slug: c.slug, label: localized(c, 'name') }) )] as chip (chip.id ?? 'all')}
@@ -92,7 +111,11 @@
 			<ul class="grid grid-cols-2 gap-x-4 gap-y-8 sm:grid-cols-3 sm:gap-x-6 lg:grid-cols-4">
 				{#each shown as product, index (product.id)}
 					<li>
-						<ProductCard {product} eager={index < 4} onbuy={() => (checkoutOpen = true)} />
+						<ProductCard
+							{product}
+							eager={index < 4}
+							onopen={() => pushState('', { sheet: 'product', productId: product.id })}
+						/>
 					</li>
 				{/each}
 			</ul>
@@ -104,6 +127,15 @@
 	</section>
 </div>
 
+<ProductSheet
+	product={opened}
+	onclose={() => history.back()}
+	onbuy={() => {
+		checkoutOpen = true;
+		history.back();
+	}}
+/>
+
 <BagBar onopen={() => (checkoutOpen = true)} />
 
 <CheckoutSheet
@@ -113,3 +145,11 @@
 	holdMinutes={data.holdMinutes}
 	delivery={data.delivery}
 />
+
+<style>
+	/* Stays under the header, which slides away on the way down the page (see SiteHeader). */
+	.chips {
+		top: var(--header-offset, 0px);
+		transition: top 0.3s;
+	}
+</style>

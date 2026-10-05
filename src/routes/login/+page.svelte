@@ -29,6 +29,13 @@
 <div class="flex min-h-dvh w-full items-center justify-center bg-muted/40 px-4">
 	<Card.Root class="w-full max-w-md">
 		<Card.Header>
+			<img
+				src="/brand/logo-green.jpg"
+				alt="Amoria, creating beautiful moments"
+				class="mb-4 w-full rounded-md"
+				width="731"
+				height="424"
+			/>
 			<Card.Title class="text-2xl">Amoria staff sign-in</Card.Title>
 			<Card.Description>Orders, products, stock and settings.</Card.Description>
 		</Card.Header>
@@ -62,7 +69,7 @@
 						/>
 						<button
 							type="button"
-							class="absolute top-1/2 right-2 -translate-y-1/2 text-muted-foreground"
+							class="absolute top-1/2 right-0 grid h-11 w-11 -translate-y-1/2 place-items-center text-muted-foreground"
 							onclick={() => (showPassword = !showPassword)}
 							aria-label={showPassword ? 'Hide password' : 'Show password'}
 						>

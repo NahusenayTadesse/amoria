@@ -110,19 +110,19 @@
 	<svg viewBox="0 0 600 660" class="h-full w-full" focusable="false">
 		<defs>
 			<radialGradient id="g-ribbon" cx="34%" cy="28%" r="80%">
-				<stop offset="0" stop-color="#e0568f" />
-				<stop offset="0.55" stop-color="#b0175a" />
-				<stop offset="1" stop-color="#7d0f40" />
+				<stop offset="0" stop-color="#2f8a5e" />
+				<stop offset="0.55" stop-color="#14543a" />
+				<stop offset="1" stop-color="#07281a" />
 			</radialGradient>
 			<radialGradient id="g-blush" cx="34%" cy="28%" r="80%">
-				<stop offset="0" stop-color="#fff0f6" />
-				<stop offset="0.55" stop-color="#f4bcd4" />
+				<stop offset="0" stop-color="#eef7f0" />
+				<stop offset="0.55" stop-color="#bfdcc9" />
 				<stop offset="1" stop-color="#dc92b4" />
 			</radialGradient>
 			<radialGradient id="g-plum" cx="34%" cy="28%" r="80%">
-				<stop offset="0" stop-color="#8a4a8e" />
-				<stop offset="0.55" stop-color="#4f2153" />
-				<stop offset="1" stop-color="#2e1330" />
+				<stop offset="0" stop-color="#3f8a63" />
+				<stop offset="0.55" stop-color="#1d5b3d" />
+				<stop offset="1" stop-color="#0c2a1d" />
 			</radialGradient>
 			<radialGradient id="g-gold" cx="34%" cy="28%" r="80%">
 				<stop offset="0" stop-color="#f6dc95" />
@@ -130,8 +130,8 @@
 				<stop offset="1" stop-color="#9b6f1c" />
 			</radialGradient>
 			<radialGradient id="g-lilac" cx="34%" cy="28%" r="80%">
-				<stop offset="0" stop-color="#f6ecfa" />
-				<stop offset="0.55" stop-color="#dcc1e6" />
+				<stop offset="0" stop-color="#e9f3ec" />
+				<stop offset="0.55" stop-color="#c9dccd" />
 				<stop offset="1" stop-color="#b995c8" />
 			</radialGradient>
 			<radialGradient id="g-cream" cx="34%" cy="28%" r="80%">
@@ -172,7 +172,7 @@
 				pathLength="1"
 				class="draw draw-late"
 			/>
-			<ellipse cx="300" cy="618" rx="250" ry="14" fill="#2e1330" opacity="0.08" class="ground" />
+			<ellipse cx="300" cy="618" rx="250" ry="14" fill="#0c2a1d" opacity="0.08" class="ground" />
 		</g>
 
 		<!-- The monogram, in the gold of the ribbon. -->

@@ -20,7 +20,7 @@
 	shows the certificate alone, on one landscape page; "Save as PDF" in the print dialog makes the
 	file.
 -->
-<article class="certificate mx-auto aspect-[297/210] w-full max-w-4xl bg-white p-3 text-[#2b1530]">
+<article class="certificate mx-auto aspect-[297/210] w-full max-w-4xl bg-white p-3 text-[#0a2418]">
 	<div
 		class="flex h-full flex-col items-center justify-between border-[3px] border-double border-[#b8862b] px-6 py-8 text-center sm:px-14 sm:py-12"
 	>
@@ -30,18 +30,18 @@
 		</div>
 
 		<div class="flex flex-col items-center gap-2 sm:gap-3">
-			<p class="text-sm text-[#6b5470] sm:text-base">{m.cert_certifies()}</p>
+			<p class="text-sm text-[#5b6a60] sm:text-base">{m.cert_certifies()}</p>
 			<p class="display border-b border-[#b8862b] px-6 pb-1 text-2xl font-bold sm:text-4xl">
 				{name}
 			</p>
-			<p class="text-sm text-[#6b5470] sm:text-base">{m.cert_completed()}</p>
+			<p class="text-sm text-[#5b6a60] sm:text-base">{m.cert_completed()}</p>
 			<p class="display text-xl font-bold sm:text-2xl">
 				{courseTitle}{#if courseTitleAm}<span class="block text-base font-semibold" lang="am"
 						>{courseTitleAm}</span
 					>{/if}
 			</p>
 			{#if endDate}
-				<p class="text-xs text-[#6b5470] sm:text-sm">
+				<p class="text-xs text-[#5b6a60] sm:text-sm">
 					{m.cert_held({ from: bothCalendarsOnDay(startDate), to: bothCalendarsOnDay(endDate) })}
 				</p>
 			{/if}
@@ -53,7 +53,7 @@
 				<p class="font-semibold">{m.cert_number({ number: certificateNo })}</p>
 			</div>
 			<div class="text-right">
-				<div class="mb-1 h-8 w-44 border-b border-[#2b1530]"></div>
+				<div class="mb-1 h-8 w-44 border-b border-[#0a2418]"></div>
 				<p>{m.cert_school()}</p>
 			</div>
 		</div>

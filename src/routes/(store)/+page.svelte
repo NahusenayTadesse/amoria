@@ -8,7 +8,7 @@
 	import MapPin from '@lucide/svelte/icons/map-pin';
 	import Package from '@lucide/svelte/icons/package';
 	import Phone from '@lucide/svelte/icons/phone';
-	import { resolve } from '$app/paths';
+	import { asset, resolve } from '$app/paths';
 	import { page } from '$app/state';
 	import type { AppPath } from '$lib/paths';
 	import { publicFileUrl } from '@nahu/admin-kit/files';
@@ -20,6 +20,7 @@
 	import ChatButtons from '$lib/components/store/ChatButtons.svelte';
 	import HeroArt from '$lib/components/store/home/HeroArt.svelte';
 	import HeroPhotos from '$lib/components/store/home/HeroPhotos.svelte';
+	import VisitBand from '$lib/components/store/VisitBand.svelte';
 	import HomeGallery from '$lib/components/store/home/HomeGallery.svelte';
 
 	let { data } = $props();
@@ -132,9 +133,7 @@
 
 			<div class="rise mt-8 flex flex-wrap items-center gap-3" style="--i: 5">
 				<a
-					href={talk(m.chat_decor())}
-					target={external(talk(m.chat_decor())) ? '_blank' : undefined}
-					rel={external(talk(m.chat_decor())) ? 'noopener noreferrer' : undefined}
+					href={path('/decor/quote')}
 					class="btn-shine group relative inline-flex h-13 items-center gap-2 overflow-hidden rounded-full bg-[var(--am-ribbon)] px-7 text-[0.95rem] font-semibold text-white shadow-[0_14px_34px_-14px_var(--am-ribbon)] transition-transform duration-300 hover:-translate-y-0.5"
 				>
 					{m.home_cta_plan()}
@@ -201,12 +200,23 @@
 		<a
 			use:reveal
 			onpointermove={spot}
-			href={talk(m.chat_decor())}
-			target={external(talk(m.chat_decor())) ? '_blank' : undefined}
-			rel={external(talk(m.chat_decor())) ? 'noopener noreferrer' : undefined}
+			href={path('/decor/quote')}
 			class="spot group relative flex min-h-[26rem] flex-col justify-between overflow-hidden rounded-[1.5rem] bg-[var(--am-ink)] p-7 text-white sm:p-10 lg:row-span-3"
 		>
+			<img
+				src={asset('/images/demo/gallery-hall-drapes-480.webp')}
+				alt=""
+				width="900"
+				height="599"
+				loading="lazy"
+				decoding="async"
+				class="absolute inset-0 h-full w-full object-cover opacity-55 transition-transform duration-[1400ms] ease-out group-hover:scale-105"
+			/>
 			<div class="decor-bg" aria-hidden="true"></div>
+			<div
+				class="absolute inset-0 bg-gradient-to-t from-[var(--am-ink)] via-[var(--am-ink)]/55 to-[var(--am-ink)]/10"
+				aria-hidden="true"
+			></div>
 			<div class="relative flex items-start justify-between">
 				<span class="accent text-6xl text-[#e6c473] sm:text-7xl">01</span>
 				<span
@@ -238,7 +248,8 @@
 			cta: string,
 			href: string,
 			Icon: typeof Gift,
-			delay: number
+			delay: number,
+			photo: string
 		)}
 			<a
 				use:reveal
@@ -270,6 +281,15 @@
 						/>
 					</span>
 				</div>
+				<img
+					src={asset(photo)}
+					alt=""
+					width="160"
+					height="160"
+					loading="lazy"
+					decoding="async"
+					class="hidden h-24 w-24 shrink-0 rounded-2xl object-cover transition-transform duration-500 group-hover:scale-105 sm:block lg:h-28 lg:w-28"
+				/>
 			</a>
 		{/snippet}
 
@@ -280,7 +300,8 @@
 			m.home_biz_gifts_cta(),
 			path('/shop'),
 			Gift,
-			1
+			1,
+			'/images/demo/hero-bouquet.webp'
 		)}
 		{@render card(
 			'03',
@@ -289,7 +310,8 @@
 			m.home_biz_rentals_cta(),
 			talk(m.chat_rentals()),
 			Package,
-			2
+			2,
+			'/images/demo/gallery-long-table-480.webp'
 		)}
 		{@render card(
 			'04',
@@ -298,14 +320,15 @@
 			m.home_biz_school_cta(),
 			path('/school'),
 			GraduationCap,
-			3
+			3,
+			'/images/demo/gallery-centerpiece-480.webp'
 		)}
 	</div>
 </section>
 
 <!-- ============================== Featured gifts ============================== -->
 {#if data.featured.length}
-	<section class="bg-card py-20 sm:py-28">
+	<section class="bg-card py-12 sm:py-28">
 		<div class="mx-auto max-w-6xl px-4 sm:px-8">
 			<div use:reveal class="flex flex-wrap items-end justify-between gap-4">
 				<div class="max-w-xl">
@@ -318,7 +341,7 @@
 				</div>
 				<a
 					href={path('/shop')}
-					class="link-arrow group inline-flex items-center gap-2 text-sm font-semibold text-foreground"
+					class="link-arrow group inline-flex min-h-11 items-center gap-2 text-sm font-semibold text-foreground"
 				>
 					<span class="link-arrow-text">{m.home_gifts_all()}</span>
 					<ArrowRight
@@ -377,8 +400,17 @@
 
 <!-- ============================== How décor works ============================== -->
 <section
-	class="steps relative isolate overflow-hidden bg-[var(--am-ink)] py-20 text-white sm:py-28"
+	class="steps relative isolate overflow-hidden bg-[var(--am-ink)] py-12 text-white sm:py-28"
 >
+	<img
+		src={asset('/images/demo/gallery-evening-hall-480.webp')}
+		alt=""
+		width="900"
+		height="600"
+		loading="lazy"
+		decoding="async"
+		class="absolute inset-0 h-full w-full object-cover opacity-20"
+	/>
 	<div class="stars" aria-hidden="true"></div>
 	<div class="relative mx-auto max-w-6xl px-4 sm:px-8">
 		<div use:reveal class="max-w-2xl">
@@ -390,7 +422,7 @@
 			</h2>
 		</div>
 
-		<ol class="mt-12 grid gap-10 sm:mt-16 md:grid-cols-3 md:gap-8">
+		<ol class="mt-8 grid gap-7 sm:mt-16 sm:gap-10 md:grid-cols-3 md:gap-8">
 			{#each steps as step, index (index)}
 				<li use:reveal style="--i: {index + 1}" class="step relative">
 					<div
@@ -409,9 +441,7 @@
 
 		<div use:reveal class="mt-12 sm:mt-16">
 			<a
-				href={talk(m.chat_decor())}
-				target={external(talk(m.chat_decor())) ? '_blank' : undefined}
-				rel={external(talk(m.chat_decor())) ? 'noopener noreferrer' : undefined}
+				href={path('/decor/quote')}
 				class="btn-shine group relative inline-flex h-13 items-center gap-2 overflow-hidden rounded-full bg-[#e6c473] px-7 text-[0.95rem] font-semibold text-[var(--am-ink)] transition-transform duration-300 hover:-translate-y-0.5"
 			>
 				{m.home_cta_plan()}
@@ -436,7 +466,9 @@
 			</h2>
 		</div>
 
-		<div class="mt-10 grid gap-5 sm:mt-14 md:grid-cols-3">
+		<div
+			class="mt-8 max-md:-mx-4 max-md:flex max-md:snap-x max-md:snap-mandatory max-md:[scrollbar-width:none] max-md:gap-4 max-md:overflow-x-auto max-md:px-4 max-md:pb-2 sm:mt-14 md:grid md:grid-cols-3 md:gap-5 max-md:[&::-webkit-scrollbar]:hidden"
+		>
 			{#each data.packages as pack, index (pack.id)}
 				{@const name = localized(pack, 'name')}
 				{@const summary = localized(pack, 'summary')}
@@ -446,7 +478,7 @@
 					use:reveal
 					style="--i: {index}"
 					class={[
-						'pack group flex flex-col overflow-hidden rounded-[1.5rem] border bg-card transition-[transform,box-shadow] duration-500 hover:-translate-y-1.5 hover:shadow-[0_30px_60px_-32px_var(--am-ink)]',
+						'pack group flex flex-col overflow-hidden rounded-[1.5rem] border bg-card transition-[transform,box-shadow] duration-500 hover:-translate-y-1.5 hover:shadow-[0_30px_60px_-32px_var(--am-ink)] max-md:w-[80%] max-md:shrink-0 max-md:snap-center',
 						pack.tier === 'premium' ? 'border-[var(--am-foil)]' : 'border-border'
 					]}
 				>
@@ -517,7 +549,7 @@
 
 <!-- ============================== Portfolio ============================== -->
 {#if data.portfolio.length}
-	<section class="bg-card py-20 sm:py-28">
+	<section class="bg-card py-12 sm:py-28">
 		<div class="mx-auto max-w-6xl px-4 sm:px-8">
 			<div use:reveal class="max-w-2xl">
 				<p class="text-xs font-semibold tracking-[0.22em] text-[var(--am-ribbon)] uppercase">
@@ -599,9 +631,14 @@
 			style="--i: 2"
 			class="school-card relative overflow-hidden rounded-[1.75rem] border border-border bg-secondary p-7 sm:p-9"
 		>
-			<GraduationCap
-				class="absolute -top-4 -right-4 h-32 w-32 rotate-12 text-[var(--am-ribbon)]/10"
-				aria-hidden="true"
+			<img
+				src={asset('/images/demo/gallery-ceremony-chairs-480.webp')}
+				alt=""
+				width="900"
+				height="1350"
+				loading="lazy"
+				decoding="async"
+				class="-mx-7 -mt-7 mb-6 h-44 w-[calc(100%+3.5rem)] max-w-none object-cover sm:-mx-9 sm:-mt-9 sm:mb-8 sm:h-52 sm:w-[calc(100%+4.5rem)]"
 			/>
 			{#if data.intake}
 				{@const intake = data.intake}
@@ -649,6 +686,9 @@
 
 <!-- ============================== Gallery ============================== -->
 <HomeGallery />
+
+<!-- ============================== The shop ============================== -->
+<VisitBand />
 
 <!-- ============================== Contact ============================== -->
 <section
@@ -926,18 +966,18 @@
 	/* ---------- Packages ---------- */
 	.pack-art.tier-basic {
 		background:
-			radial-gradient(circle at 30% 30%, #f4bcd4, transparent 55%),
-			radial-gradient(circle at 75% 70%, #dcc1e6, transparent 55%), var(--secondary);
+			radial-gradient(circle at 30% 30%, #bfdcc9, transparent 55%),
+			radial-gradient(circle at 75% 70%, #c9dccd, transparent 55%), var(--secondary);
 	}
 	.pack-art.tier-premium {
 		background:
-			radial-gradient(circle at 28% 32%, #e0568f, transparent 55%),
-			radial-gradient(circle at 76% 72%, #f6dc95, transparent 55%), #f4bcd4;
+			radial-gradient(circle at 28% 32%, #2f8a5e, transparent 55%),
+			radial-gradient(circle at 76% 72%, #f6dc95, transparent 55%), #bfdcc9;
 	}
 	.pack-art.tier-luxury {
 		background:
-			radial-gradient(circle at 30% 30%, #8a4a8e, transparent 55%),
-			radial-gradient(circle at 74% 74%, #d4a23a, transparent 55%), #4f2153;
+			radial-gradient(circle at 30% 30%, #3f8a63, transparent 55%),
+			radial-gradient(circle at 74% 74%, #d4a23a, transparent 55%), #1d5b3d;
 	}
 	.pack-art {
 		transition: transform 0.9s ease;
@@ -951,7 +991,7 @@
 		width: 1.15rem;
 		height: 1.15rem;
 		border-radius: 50%;
-		background: radial-gradient(circle at 34% 28%, #e0568f, var(--am-ribbon) 60%, #7d0f40);
+		background: radial-gradient(circle at 34% 28%, #2f8a5e, var(--am-ribbon) 60%, #07281a);
 		animation: seat-pop 0.6s cubic-bezier(0.34, 1.56, 0.64, 1) calc(var(--i) * 60ms + 0.2s) both;
 	}
 	@keyframes seat-pop {

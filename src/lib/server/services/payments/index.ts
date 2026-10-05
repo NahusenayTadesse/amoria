@@ -6,6 +6,7 @@
  *   create record (pending_payment + hold) ─► startChapa ─► Chapa checkout
  *        webhook / callback / return page / reconcile job ─► verify(txRef) ─► onPaid, once
  */
+import { notifyPaid } from '../push';
 import { and, asc, eq, lt } from 'drizzle-orm';
 import { notDeleted } from '@nahu/admin-kit/server/softDelete';
 import { WriteRefused } from '@nahu/admin-kit/server/childCrud';
@@ -174,6 +175,7 @@ export async function verify(txRef: string): Promise<VerifyOutcome> {
 		return { status: 'pending', statusPath, retryable: false };
 	}
 
+	let settled = false;
 	await transaction(async (tx) => {
 		const [claim] = await tx
 			.update(payment)
@@ -187,7 +189,9 @@ export async function verify(txRef: string): Promise<VerifyOutcome> {
 		if (claim.affectedRows !== 1) return; // Another caller got here first.
 
 		await payable.onPaid(tx, recordId, { ...row, status: 'success' });
+		settled = true;
 	});
+	if (settled) notifyPaid(row.purpose, recordId);
 
 	return { status: 'paid', statusPath };
 }
@@ -294,6 +298,7 @@ export async function reconcileStale(limit = 20): Promise<number> {
  * becomes `success` and the record is paid, in one transaction (§7 "Manual payments").
  */
 export async function confirmTransfer(paymentId: number, actor: Actor) {
+	let paid: { purpose: string; id: number } | undefined;
 	await transaction(async (tx) => {
 		const [row] = await tx.select().from(payment).where(eq(payment.id, paymentId)).for('update');
 		if (!row || row.provider !== 'bank_transfer')
@@ -318,7 +323,9 @@ export async function confirmTransfer(paymentId: number, actor: Actor) {
 			before: { status: row.status },
 			after: { status: 'success' }
 		});
+		paid = { purpose: row.purpose, id: row[RECORD_COLUMN[row.purpose]]! };
 	});
+	if (paid) notifyPaid(paid.purpose, paid.id);
 }
 
 /**
@@ -392,4 +399,5 @@ export async function recordManualPayment(
 		await payable.onPaid(tx, id, row);
 		await recordAudit(tx, actor, { table: 'payment', recordId: row.id, action: 'create' });
 	});
+	notifyPaid(kind, id);
 }

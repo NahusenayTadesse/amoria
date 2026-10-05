@@ -122,7 +122,11 @@ export default defineConfig({
 						DATABASE_URL: process.env.TEST_DATABASE_URL ?? 'mysql://dev@localhost:3306/amoria_test',
 						CHAPA_SECRET_KEY: 'CHASECK_TEST-unit-tests',
 						CHAPA_WEBHOOK_SECRET: 'unit-test-webhook-secret',
-						FILES_DIR: '.tempFiles-test'
+						FILES_DIR: '.tempFiles-test',
+						// A throwaway VAPID pair for the push tests; nothing is ever sent (web-push is mocked).
+						VAPID_PUBLIC_KEY:
+							'BBK8nOX-bRbw-0Lw344XARSSpFhCUUM00zQbOmHIo3oC2kHcou4n0PuMPEmTJBS2T06GuYDnJYmiA8uAAxBxvNw',
+						VAPID_PRIVATE_KEY: 'W6pGaAuosyXr7yNS1CFvEDkflktvYJafy_AEfcoz-Xw'
 					}
 				}
 			}

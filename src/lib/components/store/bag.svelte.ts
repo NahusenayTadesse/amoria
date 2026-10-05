@@ -1,5 +1,6 @@
 import { createContext } from 'svelte';
 import { lineTotal, sumBirr } from '$lib/money';
+import { BAG_CHANGED } from '$lib/bagCount.svelte';
 
 /**
  * The shopper's bag. Lives in the browser — the checkout posts it, and the server re-reads every
@@ -105,6 +106,7 @@ export class Bag {
 		} catch {
 			// Private mode or full storage: the bag still works for this visit.
 		}
+		dispatchEvent(new Event(BAG_CHANGED));
 	}
 }
 

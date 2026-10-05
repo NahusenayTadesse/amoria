@@ -5,13 +5,18 @@
 	import MapPin from '@lucide/svelte/icons/map-pin';
 	import MessageCircle from '@lucide/svelte/icons/message-circle';
 	import Phone from '@lucide/svelte/icons/phone';
+	import ClipboardList from '@lucide/svelte/icons/clipboard-list';
 	import Plus from '@lucide/svelte/icons/plus';
+	import { resolve } from '$app/paths';
+	import type { AppPath } from '$lib/paths';
+	import { localizeHref } from '$lib/paraglide/runtime';
 	import Send from '@lucide/svelte/icons/send';
 	import { m } from '$lib/paraglide/messages.js';
 	import { reveal } from '$lib/actions/reveal';
 	import { spotlight } from '$lib/actions/spotlight';
 	import { telHref, telegramHref, whatsappHref } from '$lib/chat';
 	import PageHero from '$lib/components/store/PageHero.svelte';
+	import PhotoArt from '$lib/components/store/PhotoArt.svelte';
 
 	let { data } = $props();
 
@@ -29,7 +34,15 @@
 
 	// Only the ways that are set up in Settings; a card with nowhere to go is not shown.
 	const ways = $derived.by(() => {
-		const list: Way[] = [];
+		// The form always works, even when no chat handle or phone is set up yet.
+		const list: Way[] = [
+			{
+				icon: ClipboardList,
+				title: m.quote_cta(),
+				hint: m.quote_lede(),
+				href: resolve(localizeHref('/decor/quote') as AppPath)
+			}
+		];
 		const wa = whatsappHref(c.whatsapp, text);
 		const tg = telegramHref(c.telegram, text);
 		const tel = telHref(c.phone);
@@ -113,7 +126,14 @@
 	accent={m.contact_h1_b()}
 	after={m.contact_h1_c()}
 	lede={m.contact_lede()}
-/>
+>
+	{#snippet art()}
+		<PhotoArt
+			main={{ src: '/images/shop/shopfront.webp', w: 1280, h: 960, small: 640 }}
+			side={{ src: '/images/demo/gallery-aisle-chairs.webp', w: 900, h: 1350, small: 480 }}
+		/>
+	{/snippet}
+</PageHero>
 
 <!-- Ways to reach us -->
 <section id="contact" class="mx-auto max-w-6xl scroll-mt-20 px-4 pb-20 sm:px-8 sm:pb-28">

@@ -26,12 +26,14 @@ import ShoppingCart from '@lucide/svelte/icons/shopping-cart';
 import PackageOpen from '@lucide/svelte/icons/package-open';
 import Lightbulb from '@lucide/svelte/icons/lightbulb';
 import Clock from '@lucide/svelte/icons/clock';
+import MessageSquareQuote from '@lucide/svelte/icons/message-square-quote';
 import type { NavItem } from '@nahu/admin-kit/navigation';
 
 /** The sidebar and the search palette. Each entry is shown only if `access` lets the viewer in. */
 export const NAVIGATION: NavItem[] = [
 	{ title: 'Today', url: '/dashboard', icon: LayoutDashboard },
 	{ title: 'Orders', url: '/dashboard/orders', icon: ShoppingBag },
+	{ title: 'Quote requests', url: '/dashboard/quote-requests', icon: MessageSquareQuote },
 	{ title: 'Products', url: '/dashboard/products', icon: Package },
 	{ title: 'Categories', url: '/dashboard/categories', icon: Tags },
 	{
@@ -114,5 +116,6 @@ export const ENTITIES: Record<string, string> = {
 	requisition: '/dashboard/requisitions',
 	pos_shift: '/dashboard/pos/shifts',
 	course: '/dashboard/school',
-	registration: '/dashboard/school/students'
+	registration: '/dashboard/school/students',
+	quote_request: '/dashboard/quote-requests'
 };

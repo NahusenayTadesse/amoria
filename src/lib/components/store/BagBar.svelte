@@ -17,7 +17,7 @@
 -->
 {#if bag.count > 0}
 	<div
-		class="pointer-events-none fixed inset-x-0 bottom-0 z-40 px-3 pb-[max(0.75rem,env(safe-area-inset-bottom))]"
+		class="pointer-events-none fixed inset-x-0 bottom-0 z-40 px-3 pb-3 max-sm:bottom-[calc(4rem+env(safe-area-inset-bottom))] sm:pb-[max(0.75rem,env(safe-area-inset-bottom))]"
 		transition:fly={{ y: 80, duration: 220 }}
 	>
 		<button

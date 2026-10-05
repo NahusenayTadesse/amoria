@@ -1,8 +1,7 @@
 <script lang="ts">
-	import CalendarDays from '@lucide/svelte/icons/calendar-days';
 	import Check from '@lucide/svelte/icons/check';
 	import { m } from '$lib/paraglide/messages.js';
-	import { bothCalendarsOnDay, localized } from '$lib/localized';
+	import { bothCalendarsOnDay, localized, shortDay } from '$lib/localized';
 	import type { DateRange } from '$lib/schoolPlan';
 	import type { SchoolIntake } from '$lib/server/services/school';
 	import SeatsLeft from './SeatsLeft.svelte';
@@ -19,69 +18,103 @@
 	};
 	let { ranges, days, value = $bindable(), name = 'intakeId', error }: Props = $props();
 
+	/** The range whose shifts are showing: the chosen class's, else the first with a place. */
+	// Starts on the chosen class's range; after that the guest's own tabs decide.
+	// svelte-ignore state_referenced_locally
+	let activeStart = $state(
+		(
+			ranges.find((r) => r.classes.some((c) => c.id === value)) ??
+			ranges.find((r) => r.seatsLeft > 0) ??
+			ranges[0]
+		)?.startDate
+	);
+	const active = $derived(ranges.find((r) => r.startDate === activeStart));
+
 	/** A class's label: its shift in the guest's language, or "Class" for a single-shift course. */
 	const shiftLabel = (c: SchoolIntake) =>
 		c.shiftName
 			? localized({ name: c.shiftName, nameAm: c.shiftNameAm }, 'name')
 			: m.school_class();
+
+	/** Picking a different range clears a class chosen in another, so nothing hidden is posted. */
+	function showRange(start: string) {
+		activeStart = start;
+		const keep = ranges.find((r) => r.startDate === start)?.classes.some((c) => c.id === value);
+		if (!keep) value = undefined;
+	}
 </script>
 
 <!--
-	The date ranges as cards, their shifts as radio buttons: a class with no place left is shown
-	(so the guest can see the morning is taken) but cannot be picked.
+	Two steps in one small space: the date ranges as chips along a row, then the chosen range's
+	shifts as cards. A class with no place left is shown (so the guest can see the morning is taken)
+	but cannot be picked. The posted value is the hidden input, so only what is chosen is sent.
 -->
-<fieldset class="flex flex-col gap-4" aria-describedby={error ? `${name}-error` : undefined}>
+<fieldset
+	class="flex min-w-0 flex-col gap-4"
+	aria-describedby={error ? `${name}-error` : undefined}
+>
 	<legend class="sr-only">{m.reg_pick_heading()}</legend>
-	{#each ranges as range (range.startDate)}
-		{@const full = range.seatsLeft <= 0}
-		<div
-			class={[
-				'rounded-[1.5rem] border bg-card p-5 transition-colors',
-				range.classes.some((c) => c.id === value) ? 'border-[var(--am-ribbon)]' : 'border-border',
-				full && 'opacity-70'
-			]}
-		>
-			<div class="flex flex-wrap items-start justify-between gap-2">
-				<p class="flex items-start gap-2.5">
-					<CalendarDays class="mt-1 h-4 w-4 shrink-0 text-[var(--am-ribbon)]" aria-hidden="true" />
-					<span>
-						<span class="block font-semibold">
-							{range.endDate
-								? m.school_range({
-										from: bothCalendarsOnDay(range.startDate),
-										to: bothCalendarsOnDay(range.endDate)
-									})
-								: bothCalendarsOnDay(range.startDate)}
-						</span>
-						<span class="text-sm text-muted-foreground">{m.school_days({ days })}</span>
-					</span>
-				</p>
-				{#if full}
-					<span
-						class="rounded-full bg-secondary px-3 py-1 text-xs font-semibold text-muted-foreground"
-					>
-						{m.reg_range_full()}
-					</span>
-				{/if}
-			</div>
+	<input type="hidden" {name} value={value ?? ''} />
 
-			<div class="mt-4 grid gap-2 sm:grid-cols-2">
-				{#each range.classes as c (c.id)}
+	<div
+		role="tablist"
+		aria-label={m.reg_pick_heading()}
+		class="-mx-4 flex [scrollbar-width:none] gap-2 overflow-x-auto px-4 pb-1 sm:mx-0 sm:px-0 [&::-webkit-scrollbar]:hidden"
+	>
+		{#each ranges as range (range.startDate)}
+			{@const full = range.seatsLeft <= 0}
+			{@const selected = range.startDate === activeStart}
+			<button
+				type="button"
+				role="tab"
+				aria-selected={selected}
+				onclick={() => showRange(range.startDate)}
+				class={[
+					'flex min-h-14 shrink-0 flex-col items-start justify-center rounded-2xl border px-4 text-left transition-colors active:scale-[0.98]',
+					selected
+						? 'border-[var(--am-ribbon)] bg-[var(--am-ribbon)] text-white'
+						: 'border-border bg-card',
+					full && !selected && 'opacity-60'
+				]}
+			>
+				<span class="text-sm font-semibold whitespace-nowrap">
+					{shortDay(range.startDate)}{range.endDate ? ` – ${shortDay(range.endDate)}` : ''}
+				</span>
+				<span class={['text-xs', selected ? 'text-white/80' : 'text-muted-foreground']}>
+					{full ? m.reg_range_full() : m.school_days({ days })}
+				</span>
+			</button>
+		{/each}
+	</div>
+
+	{#if active}
+		<div class="rounded-[1.25rem] border border-border bg-card p-4" role="tabpanel">
+			<p class="text-sm text-muted-foreground">
+				{active.endDate
+					? m.school_range({
+							from: bothCalendarsOnDay(active.startDate),
+							to: bothCalendarsOnDay(active.endDate)
+						})
+					: bothCalendarsOnDay(active.startDate)}
+			</p>
+
+			<div class="mt-3 grid gap-2 sm:grid-cols-2">
+				{#each active.classes as c (c.id)}
 					{@const disabled = c.seatsLeft <= 0}
 					{@const checked = value === c.id}
 					<label
 						class={[
-							'relative flex items-center justify-between gap-3 rounded-2xl border p-3.5 transition-colors',
+							'relative flex min-h-16 items-center justify-between gap-3 rounded-2xl border p-3.5 transition-colors',
 							disabled
 								? 'cursor-not-allowed border-dashed border-border bg-secondary/50'
-								: 'cursor-pointer border-border hover:border-foreground/50',
-							checked && 'border-[var(--am-ribbon)] bg-[#fbe4ee]/50 ring-1 ring-[var(--am-ribbon)]'
+								: 'cursor-pointer border-border hover:border-foreground/50 active:bg-secondary',
+							checked && 'border-[var(--am-ribbon)] bg-[#e6f1e9]/50 ring-1 ring-[var(--am-ribbon)]'
 						]}
 					>
 						<input
 							type="radio"
 							class="peer sr-only"
-							{name}
+							name="{name}-shift"
 							value={c.id}
 							{disabled}
 							{checked}
@@ -115,7 +148,7 @@
 				{/each}
 			</div>
 		</div>
-	{/each}
+	{/if}
 	{#if error}
 		<p id="{name}-error" class="text-sm text-destructive" role="alert">
 			{Array.isArray(error) ? error[0] : error}

@@ -139,6 +139,7 @@
 
 <Sheet.Root bind:open>
 	<Sheet.Content
+		data-site-type
 		side={wide.current ? 'right' : 'bottom'}
 		class={[
 			'store flex flex-col gap-0 p-0',

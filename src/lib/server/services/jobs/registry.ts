@@ -1,6 +1,7 @@
 import { expireHolds } from '../orders';
 import { expireRegistrations } from '../school';
 import { reconcileStale } from '../payments';
+import { sendClassReminders } from '../push';
 
 export type Job = {
 	name: string;
@@ -22,6 +23,12 @@ export const JOBS: Job[] = [
 			orders: await expireHolds(),
 			registrations: await expireRegistrations()
 		})
+	},
+	{
+		name: 'class-reminders',
+		everySeconds: 3600,
+		timeoutSeconds: 300,
+		run: () => sendClassReminders()
 	},
 	{
 		name: 'reconcile-payments',

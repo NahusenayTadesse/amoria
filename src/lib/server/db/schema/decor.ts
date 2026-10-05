@@ -135,6 +135,11 @@ export const quoteRequest = mysqlTable(
 			onDelete: 'set null'
 		}),
 		sourceId: int('source_id').references(() => trafficSource.id, { onDelete: 'set null' }),
+		/**
+		 * Made by the browser for each request it sends, so a request queued offline and sent twice
+		 * (a flaky connection, two tabs) is still one request.
+		 */
+		clientRef: varchar('client_ref', { length: 40 }).unique(),
 		...timestamps()
 	},
 	(table) => [

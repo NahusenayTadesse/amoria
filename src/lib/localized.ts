@@ -33,7 +33,9 @@ export function bothCalendars(instant: Date): string {
 		dateStyle: 'medium',
 		timeZone: LOCAL_TIME_ZONE
 	}).format(instant);
-	return `${formatEthiopianDate(instant)} (${gregorian})`;
+	const ethiopian = formatEthiopianDate(instant);
+	// Each reader sees their own calendar first, the other in brackets.
+	return getLocale() === 'am' ? `${ethiopian} (${gregorian})` : `${gregorian} (${ethiopian})`;
 }
 
 /** A time said both ways, since "9:00" is heard as three in the afternoon on the Ethiopian clock. */
@@ -47,4 +49,18 @@ export function bothClocks(instant: Date): string {
  */
 export function bothCalendarsOnDay(day: string): string {
 	return bothCalendars(new Date(`${day}T12:00:00+03:00`));
+}
+
+/**
+ * A day as short as it can be on a chip: "12 Oct" for an English reader, the Ethiopian "2 ጥቅምት"
+ * for an Amharic one. The full date, on both calendars, is shown beside it.
+ */
+export function shortDay(day: string): string {
+	const instant = new Date(`${day}T12:00:00+03:00`);
+	if (getLocale() === 'am') return formatEthiopianDate(instant).replace(/\s+\d{3,4}$/, '');
+	return new Intl.DateTimeFormat('en-GB', {
+		day: 'numeric',
+		month: 'short',
+		timeZone: LOCAL_TIME_ZONE
+	}).format(instant);
 }

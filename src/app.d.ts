@@ -5,6 +5,11 @@ type AuthSession = typeof auth.$Infer.Session;
 // See https://svelte.dev/docs/kit/types#app.d.ts
 declare global {
 	namespace App {
+		/** Shallow-routing state: a sheet open over the page, closed by the Back button. */
+		interface PageState {
+			sheet?: 'more' | 'product';
+			productId?: number;
+		}
 		interface Locals {
 			permList: string[];
 			isSuperAdmin: boolean;

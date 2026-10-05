@@ -23,6 +23,13 @@
 <div class="flex min-h-dvh w-full items-center justify-center bg-muted/40 px-4">
 	<Card.Root class="w-full max-w-md">
 		<Card.Header>
+			<img
+				src="/brand/logo-green.jpg"
+				alt="Amoria, creating beautiful moments"
+				class="mb-4 w-full rounded-md"
+				width="731"
+				height="424"
+			/>
 			<Card.Title class="text-2xl">Create the first admin</Card.Title>
 			<Card.Description>
 				This page works once. After this, staff accounts are created from the dashboard.

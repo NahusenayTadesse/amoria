@@ -18,7 +18,7 @@
 	class={[
 		'inline-flex items-center gap-2 rounded-full px-3 py-1 text-xs font-semibold',
 		full && 'bg-secondary text-muted-foreground',
-		few && 'bg-[#fbe4ee] text-[var(--am-ribbon)]',
+		few && 'bg-[#e6f1e9] text-[var(--am-ribbon)]',
 		!full && !few && 'bg-[#e3f1e6] text-[#1d5b2c]'
 	]}
 >

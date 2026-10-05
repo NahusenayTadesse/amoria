@@ -160,7 +160,7 @@ Keep `FILES_DIR` **outside** the deploy folder so uploads survive redeploys, for
 
 ### 3.5 Environment variables
 
-`DATABASE_URL`, `ORIGIN`, `BETTER_AUTH_SECRET`, `FILES_DIR`, `CHAPA_SECRET_KEY`, `CHAPA_WEBHOOK_SECRET`, `SMS_PROVIDER`, `SMS_API_KEY`, `SMS_SENDER`, `SMTP_HOST`, `SMTP_PORT`, `SMTP_USER`, `SMTP_PASS`, `MAIL_FROM`, `TELEGRAM_BOT_TOKEN`, `TELEGRAM_WEBHOOK_SECRET`, `TELEGRAM_STAFF_CHAT_ID`, `JOBS_SECRET`, `NODE_OPTIONS`, `BODY_SIZE_LIMIT`.
+`DATABASE_URL`, `ORIGIN`, `BETTER_AUTH_SECRET`, `FILES_DIR`, `CHAPA_SECRET_KEY`, `CHAPA_WEBHOOK_SECRET`, `SMS_PROVIDER`, `SMS_API_KEY`, `SMS_SENDER`, `SMTP_HOST`, `SMTP_PORT`, `SMTP_USER`, `SMTP_PASS`, `MAIL_FROM`, `TELEGRAM_BOT_TOKEN`, `TELEGRAM_WEBHOOK_SECRET`, `TELEGRAM_STAFF_CHAT_ID`, `VAPID_PUBLIC_KEY`, `VAPID_PRIVATE_KEY`, `VAPID_SUBJECT`, `JOBS_SECRET`, `NODE_OPTIONS`, `BODY_SIZE_LIMIT`.
 Read them only through `$env/dynamic/private`, and list every one in `.env.example`.
 
 ---
@@ -564,6 +564,16 @@ job: reconcile initiated payments > 10 min ────────────�
 
 ---
 
+### 8.1 Web Push, the app shell and offline
+
+Built before the messaging outbox, and independent of it. When the outbox exists, push becomes one of its channels.
+
+- **Installable app (PWA).** `static/manifest.webmanifest`, icons and iOS splash images in `static/brand/`, and `src/service-worker.ts`. The worker caches the build, the brand icons, photos and fonts; public pages (`/`, `/shop`, `/school`, `/about`, `/contact`, `/decor/quote`) are network first with the last copy as fallback, and `/offline` is the last resort. Dashboard, login, payments, `/o/…`, `/reg/…`, `/buy/…` and `/api/…` are never cached.
+- **Web Push for customers** (`services/push.ts`, `/api/push`, table `push_subscription`). No accounts: a phone follows one order or registration from its `/o/[token]` or `/reg/[token]` page ("Get updates on this phone"), using that record's token. Sent on: payment confirmed, an order moving to preparing, ready, completed or cancelled, a seat confirmed or cancelled, a course result, and the day before a class. Sending is best effort and never awaited; gone subscriptions (404, 410) are deleted. A record is followed by at most 5 phones. Needs `VAPID_PUBLIC_KEY` and `VAPID_PRIVATE_KEY` (`npx web-push generate-vapid-keys`), and `VAPID_SUBJECT` (a `mailto:` or `https:` contact; defaults to `ORIGIN`). Without the keys the opt-in button is not shown. iPhone supports Web Push only for the installed app.
+- **Offline queue** (`src/lib/offlineQueue.ts`). The quote request saves into IndexedDB when there is no signal and is sent to `POST /api/quote` when the connection returns (the `online` event, at page load, or Background Sync where the browser has it). Each request carries a `clientRef`, stored on `quote_request.client_ref` (unique), so a request sent twice is one request.
+
+---
+
 ## 9. Background jobs (in-app, no DB events)
 
 **Runner:** a registry of `{ name, everySeconds, run }`. `maybeRunDueJobs()` is:
@@ -578,6 +588,7 @@ job: reconcile initiated payments > 10 min ────────────�
 | -------------------- | ------------------ | -------------------------------------------------------------------------------- |
 | `send-messages`      | 30 s               | send due outbox rows                                                             |
 | `expire-holds`       | 1 min              | `Payable.onExpired` for unpaid orders, rentals and registrations                 |
+| `class-reminders`    | 1 h                | push "your class starts tomorrow" to confirmed students who follow their seat    |
 | `reconcile-payments` | 5 min              | verify stale `initiated` payments                                                |
 | `flush-link-clicks`  | 1 min              | write buffered clicks                                                            |
 | `rental-reminders`   | 1 h                | queue return reminders once                                                      |
@@ -601,7 +612,7 @@ Public routes are localized by Paraglide (`/…` for English, `/am/…` for Amha
 | `/cart`, `/checkout`                                                              | Guest checkout (`createForm` + `InputComp`)                                                                                                             |
 | `/rent`, `/rent/[category]`, `/rent/book/[slug]`                                  | Rental catalogue and booking (date range, live price, contact, pay)                                                                                     |
 | `/decor`, `/decor/packages/[slug]`, `/decor/portfolio`, `/decor/portfolio/[slug]` |                                                                                                                                                         |
-| `/decor/quote`                                                                    | Quote request (pre-filled from `?package=`)                                                                                                             |
+| `/decor/quote`                                                                    | **Built.** Quote request (pre-filled from `?package=`); queues offline and sends when back online (§8.1). Staff: `/dashboard/quote-requests`            |
 | `/school`, `/school/[slug]`, `/school/[slug]/register`                            | Courses, classes (dates × shift) with places left, registration                                                                                         |
 | `/o/[token]`, `/r/[token]`, `/reg/[token]`                                        | Status pages (pay again if pending)                                                                                                                     |
 | `/q/[token]`                                                                      | Quote page: itemised, accept, pay deposit or balance, no login. `/q/[token]/print` uses `PrintSheet`; `POST /q/[token]/viewed` is the view beacon (§11) |

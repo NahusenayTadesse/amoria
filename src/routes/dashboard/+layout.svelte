@@ -6,6 +6,7 @@
 	import AppSidebar from '@nahu/admin-kit/components/shell/AppSidebar.svelte';
 	import Search from '@nahu/admin-kit/components/shell/Search.svelte';
 	import DarkMode from '@nahu/admin-kit/components/shell/DarkMode.svelte';
+	import InstallButton from '$lib/components/store/InstallButton.svelte';
 	import { Button } from '@nahu/admin-kit/components/ui/button/index.js';
 	import { access } from '$lib/access';
 	import { ENTITIES, NAVIGATION } from '$lib/navigation';
@@ -26,7 +27,7 @@
 	<Sidebar.Provider>
 		<AppSidebar footer="Built by PulseData Solutions">
 			{#snippet logo()}
-				<span class="text-lg font-bold">Amoria</span>
+				<img src="/brand/logo.png" alt="Amoria" class="mx-auto h-16 w-auto" />
 			{/snippet}
 		</AppSidebar>
 		<main class="min-w-0 flex-1 px-2">
@@ -35,6 +36,7 @@
 			>
 				<Sidebar.Trigger />
 				<div class="flex items-center gap-2">
+					<InstallButton compact class="hidden sm:inline-flex" />
 					<Search />
 					<DarkMode />
 					<span class="hidden text-sm text-muted-foreground sm:inline">{data.user.name}</span>

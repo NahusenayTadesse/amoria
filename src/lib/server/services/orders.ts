@@ -1,4 +1,5 @@
 import { and, asc, desc, eq, inArray, isNotNull, lt, lte, sql } from 'drizzle-orm';
+import { notifyOrder, type OrderEvent } from './push';
 import type { Writer } from '@nahu/admin-kit/server/db';
 import { insertReturningId } from '@nahu/admin-kit/server/db/insert';
 import { notDeleted } from '@nahu/admin-kit/server/softDelete';
@@ -320,6 +321,14 @@ export const orderPayable: Payable = {
 	}
 };
 
+/** The moves a customer is told about; `paid` is announced by the payment, not by staff. */
+const NOTIFIED: Partial<Record<OrderStatus, OrderEvent>> = {
+	preparing: 'preparing',
+	ready: 'ready',
+	completed: 'completed',
+	cancelled: 'cancelled'
+};
+
 /**
  * Moves an order along by hand (§6: one service function per state change). The allowed moves are
  * `ORDER_TRANSITIONS`, shared with the buttons. Cancelling puts back whatever stock the order still
@@ -375,6 +384,7 @@ export async function setOrderStatus(
 		});
 	});
 	invalidate('catalog');
+	if (NOTIFIED[to]) void notifyOrder(orderId, NOTIFIED[to]);
 }
 
 /**
