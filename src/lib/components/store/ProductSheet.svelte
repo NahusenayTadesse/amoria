@@ -13,10 +13,13 @@
 	import { m } from '$lib/paraglide/messages.js';
 	import { birr, localized } from '$lib/localized';
 	import { buzz } from '$lib/haptics';
+	import { flyToBag } from '$lib/flyToBag';
+	import { productLink, shareLink } from '$lib/share';
 	import { getBag } from './bag.svelte';
 
 	type Product = {
 		id: number;
+		slug: string;
 		name: string;
 		nameAm: string | null;
 		description: string | null;
@@ -37,23 +40,22 @@
 	const soldOut = $derived(!product || product.stockQty <= 0);
 	const atMax = $derived(product ? inBag >= bag.maxFor(product) : true);
 
+	let addButton = $state<HTMLElement>();
+
 	function add() {
 		if (!product) return;
 		bag.add(product);
 		buzz();
+		flyToBag(addButton, product.gallery[0] ? publicFileUrl(product.gallery[0].fileName) : null);
 	}
 
-	/** The phone's own share sheet (WhatsApp, Telegram, SMS…), where there is one. */
-	const canShare = typeof navigator !== 'undefined' && 'share' in navigator;
 	function share() {
 		if (!product) return;
-		navigator
-			.share({
-				title: name,
-				text: `${name}: ${birr(product.price)}`,
-				url: location.origin + '/shop'
-			})
-			.catch(() => undefined);
+		void shareLink({
+			title: name,
+			text: `${name}: ${birr(product.price)}`,
+			url: productLink(product.slug)
+		});
 	}
 
 	/** Straight to checkout: in the bag once (not added again), then the checkout opens. */
@@ -108,16 +110,14 @@
 				<div class="px-5 pt-4 pb-5">
 					<div class="flex items-start justify-between gap-3">
 						<h2 class="display text-2xl leading-tight font-bold">{name}</h2>
-						{#if canShare}
-							<button
-								type="button"
-								onclick={share}
-								aria-label={m.product_share({ name })}
-								class="grid h-11 w-11 shrink-0 place-items-center rounded-full border border-border active:bg-secondary"
-							>
-								<Share2 class="h-4 w-4" aria-hidden="true" />
-							</button>
-						{/if}
+						<button
+							type="button"
+							onclick={share}
+							aria-label={m.product_share({ name })}
+							class="grid h-11 w-11 shrink-0 place-items-center rounded-full border border-border active:bg-secondary"
+						>
+							<Share2 class="h-4 w-4" aria-hidden="true" />
+						</button>
 					</div>
 					<p class="mt-1 text-xl font-semibold tabular-nums">{birr(product.price)}</p>
 					{#if soldOut}
@@ -137,6 +137,7 @@
 
 			{#if !soldOut}
 				<div
+					bind:this={addButton}
 					class="flex items-center gap-3 border-t border-border bg-background px-5 pt-3 pb-[max(0.75rem,env(safe-area-inset-bottom))]"
 				>
 					{#if inBag === 0}

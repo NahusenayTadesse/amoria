@@ -11,6 +11,7 @@ import { BAG_CHANGED } from '$lib/bagCount.svelte';
 
 export type BagProduct = {
 	id: number;
+	slug: string;
 	name: string;
 	nameAm: string | null;
 	price: number;

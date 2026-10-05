@@ -1,15 +1,21 @@
 <script lang="ts">
 	import Minus from '@lucide/svelte/icons/minus';
 	import Plus from '@lucide/svelte/icons/plus';
+	import Share2 from '@lucide/svelte/icons/share-2';
+	import Link from '@lucide/svelte/icons/link';
+	import Zap from '@lucide/svelte/icons/zap';
 	import { publicFileUrl } from '@nahu/admin-kit/files';
 	import { m } from '$lib/paraglide/messages.js';
 	import { birr, localized } from '$lib/localized';
 	import { buzz } from '$lib/haptics';
+	import { flyToBag } from '$lib/flyToBag';
+	import { buyLink, productLink, shareLink } from '$lib/share';
 	import { getBag } from './bag.svelte';
 
 	type Props = {
 		product: {
 			id: number;
+			slug: string;
 			name: string;
 			nameAm: string | null;
 			price: number;
@@ -34,14 +40,39 @@
 	const soldOut = $derived(product.stockQty <= 0);
 	const atMax = $derived(inBag >= bag.maxFor(product));
 
+	let photo = $state<HTMLElement>();
+
 	function add() {
 		bag.add(product);
 		buzz();
+		flyToBag(photo, product.image ? publicFileUrl(product.image) : null);
+	}
+
+	/** Phones: the share button opens the two options with a tap. Mouse: hovering the card does. */
+	let shareOpen = $state(false);
+	let shareBox = $state<HTMLElement>();
+
+	function share(kind: 'page' | 'buy') {
+		shareOpen = false;
+		void shareLink({
+			title: name,
+			text: `${name}: ${birr(product.price)}`,
+			url: kind === 'page' ? productLink(product.slug) : buyLink(product.slug)
+		});
 	}
 </script>
 
+<svelte:window
+	onpointerdown={(event) => {
+		if (shareOpen && !shareBox?.contains(event.target as Node)) shareOpen = false;
+	}}
+/>
+
 <article class="group flex flex-col">
-	<div class="relative aspect-square overflow-hidden rounded-[var(--radius)] bg-secondary">
+	<div
+		bind:this={photo}
+		class="relative aspect-square overflow-hidden rounded-[var(--radius)] bg-secondary"
+	>
 		<button
 			type="button"
 			onclick={onopen}
@@ -77,6 +108,48 @@
 				{m.product_featured()}
 			</span>
 		{/if}
+
+		<div bind:this={shareBox} class="absolute top-2 right-2 flex flex-col items-end gap-2">
+			<button
+				type="button"
+				onclick={() => (shareOpen = !shareOpen)}
+				aria-label={m.share_toggle({ name })}
+				aria-expanded={shareOpen}
+				class="grid h-10 w-10 place-items-center rounded-full bg-background/90 text-foreground shadow-md backdrop-blur pointer-fine:hidden"
+			>
+				<Share2 class="h-4 w-4" aria-hidden="true" />
+			</button>
+			<div
+				class={[
+					'flex flex-col gap-2 transition-opacity',
+					shareOpen
+						? 'opacity-100'
+						: 'pointer-events-none opacity-0 pointer-fine:pointer-events-auto',
+					'pointer-fine:group-focus-within:opacity-100 pointer-fine:group-hover:opacity-100'
+				]}
+			>
+				<button
+					type="button"
+					onclick={() => share('page')}
+					aria-label={m.share_product_link({ name })}
+					title={m.share_product_link({ name })}
+					class="grid h-10 w-10 place-items-center rounded-full bg-background/90 text-foreground shadow-md backdrop-blur active:scale-90"
+				>
+					<Link class="h-4 w-4" aria-hidden="true" />
+				</button>
+				{#if !soldOut}
+					<button
+						type="button"
+						onclick={() => share('buy')}
+						aria-label={m.share_buy_link({ name })}
+						title={m.share_buy_link({ name })}
+						class="grid h-10 w-10 place-items-center rounded-full bg-background/90 text-foreground shadow-md backdrop-blur active:scale-90"
+					>
+						<Zap class="h-4 w-4" aria-hidden="true" />
+					</button>
+				{/if}
+			</div>
+		</div>
 
 		{#if !soldOut}
 			{#if inBag === 0}

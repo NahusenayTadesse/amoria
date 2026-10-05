@@ -236,7 +236,6 @@
 	"install_ios_step2": "Choose “Add to Home Screen”.",
 	"install_ios_step3": "Tap Add. Amoria opens like an app.",
 	"install_close": "Got it",
-	"nav_home": "Home",
 	"nav_main": "Main menu",
 	"offline_banner": "You are offline. Showing what is saved on this device.",
 	"offline_title": "You are offline",
@@ -473,5 +472,13 @@
 	"cert_number": "Certificate no. {number}",
 	"cert_school": "Amoria Décor School, Mekanisa, Addis Ababa",
 	"cert_print": "Print or save as PDF",
-	"cert_back": "Back to your registration"
+	"cert_back": "Back to your registration",
+	"share_copied": "Link copied",
+	"share_failed": "Couldn't copy the link",
+	"share_product_link": "Share link to {name}",
+	"share_buy_link": "Share buy link for {name}",
+	"share_toggle": "Share {name}",
+	"bag_share": "Share bag",
+	"bag_share_title": "My Amoria bag",
+	"bag_share_text": "{count} in my bag: {total}"
 }

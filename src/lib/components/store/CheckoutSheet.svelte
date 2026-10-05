@@ -24,6 +24,8 @@
 	import { sumBirr } from '$lib/money';
 	import type { CheckoutMessage } from '../../../routes/(store)/shop/[[category]]/+page.server';
 	import { getBag } from './bag.svelte';
+	import Share2 from '@lucide/svelte/icons/share-2';
+	import { cartLink, shareLink } from '$lib/share';
 	import ContactFields from './ContactFields.svelte';
 	import PaymentMethodFields from './PaymentMethodFields.svelte';
 
@@ -106,6 +108,15 @@
 	const fee = $derived(
 		delivering ? (area ? deliveryFee(area.fee, bag.total, delivery.free) : null) : 0
 	);
+	/** The whole bag as one link: anyone who opens it gets the same bag, ready to check out. */
+	function shareBag() {
+		void shareLink({
+			title: m.bag_share_title(),
+			text: m.bag_share_text({ count: bag.count, total: birr(bag.total) }),
+			url: cartLink(bag.items.map((item) => ({ slug: item.product.slug, qty: item.qty })))
+		});
+	}
+
 	const grandTotal = $derived(sumBirr([bag.total, fee ?? 0]));
 	const freeGap = $derived(
 		delivery.enabled ? awayFromFreeDelivery(bag.total, delivery.free) : null
@@ -237,6 +248,14 @@
 								</li>
 							{/each}
 						</ul>
+						<button
+							type="button"
+							onclick={shareBag}
+							class="flex h-11 items-center justify-center gap-2 self-start rounded-full border border-border px-4 text-sm font-medium active:bg-secondary"
+						>
+							<Share2 class="h-4 w-4" aria-hidden="true" />
+							{m.bag_share()}
+						</button>
 						{@render freeDeliveryNote()}
 						<div class="rounded-[var(--radius)] bg-secondary p-4 text-sm">
 							<p>{delivery.enabled ? m.checkout_fulfilment_note() : m.checkout_pickup_note()}</p>

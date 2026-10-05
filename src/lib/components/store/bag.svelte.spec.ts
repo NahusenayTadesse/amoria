@@ -3,6 +3,7 @@ import { Bag, MAX_LINES } from './bag.svelte';
 
 const product = (id: number, overrides: Partial<{ price: number; stockQty: number }> = {}) => ({
 	id,
+	slug: `gift-${id}`,
 	name: `Gift ${id}`,
 	nameAm: null,
 	price: 100,

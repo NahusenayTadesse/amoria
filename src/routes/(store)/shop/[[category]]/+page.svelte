@@ -7,9 +7,9 @@
 	import { localizeHref } from '$lib/paraglide/runtime';
 	import { m } from '$lib/paraglide/messages.js';
 	import { localized } from '$lib/localized';
+	import { parseCart } from '$lib/share';
 	import { Bag, setBag } from '$lib/components/store/bag.svelte';
 	import ProductCard from '$lib/components/store/ProductCard.svelte';
-	import BagBar from '$lib/components/store/BagBar.svelte';
 	import ProductSheet from '$lib/components/store/ProductSheet.svelte';
 	import CheckoutSheet from '$lib/components/store/CheckoutSheet.svelte';
 
@@ -47,18 +47,41 @@
 	onMount(() => {
 		bag.restore();
 
+		const cleaned = (...drop: string[]) => {
+			// The other params, kept as they were.
+			const rest = [...page.url.searchParams].filter(([key]) => !drop.includes(key));
+			const query = rest.length
+				? `?${rest.map(([k, v]) => `${encodeURIComponent(k)}=${encodeURIComponent(v)}`).join('&')}`
+				: '';
+			replaceState(resolve(`${page.url.pathname}${query}` as AppPath), page.state);
+		};
+
 		// `/buy/[slug]` lands here with `?add=` (§10): the gift goes in the bag and checkout opens.
 		const slug = page.url.searchParams.get('add');
 		if (slug) {
 			const product = data.products.find((p) => p.slug === slug);
 			if (product && product.stockQty > 0 && bag.qtyOf(product.id) === 0) bag.add(product);
 			if (bag.count > 0) checkoutOpen = true;
-			// The other params, kept as they were; only `add` is dropped.
-			const rest = [...page.url.searchParams].filter(([key]) => key !== 'add');
-			const query = rest.length
-				? `?${rest.map(([k, v]) => `${encodeURIComponent(k)}=${encodeURIComponent(v)}`).join('&')}`
-				: '';
-			replaceState(resolve(`${page.url.pathname}${query}` as AppPath), page.state);
+			cleaned('add');
+		}
+
+		// A shared bag, `?cart=slug.qty,…`: its gifts go in this bag, and checkout opens.
+		const shared = page.url.searchParams.get('cart');
+		if (shared) {
+			for (const { slug, qty } of parseCart(shared)) {
+				const product = data.products.find((p) => p.slug === slug);
+				if (product && product.stockQty > 0) bag.set(product, qty);
+			}
+			if (bag.count > 0) checkoutOpen = true;
+			cleaned('cart');
+		}
+
+		// A shared product link, `?product=slug`: that gift's sheet opens.
+		const wanted = page.url.searchParams.get('product');
+		if (wanted) {
+			const product = data.products.find((p) => p.slug === wanted);
+			cleaned('product');
+			if (product) pushState('', { sheet: 'product', productId: product.id });
 		}
 	});
 </script>
@@ -135,8 +158,6 @@
 		history.back();
 	}}
 />
-
-<BagBar onopen={() => (checkoutOpen = true)} />
 
 <CheckoutSheet
 	bind:open={checkoutOpen}

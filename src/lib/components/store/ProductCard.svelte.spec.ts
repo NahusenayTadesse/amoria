@@ -8,6 +8,7 @@ import WithBag from './testing/WithBag.svelte';
 
 const gift = (overrides: Record<string, unknown> = {}) => ({
 	id: 1,
+	slug: 'red-rose-bouquet',
 	name: 'Red rose bouquet',
 	nameAm: 'የቀይ ጽጌረዳ እቅፍ',
 	price: 1450,
@@ -76,5 +77,24 @@ describe('ProductCard', () => {
 		renderCard(gift({ image: 'rose.webp', imageAlt: 'Twelve red roses' }));
 		const img = page.getByRole('img', { name: 'Twelve red roses' });
 		await expect.element(img).toHaveAttribute('src', '/media/rose.webp');
+	});
+});
+
+describe('ProductCard sharing', () => {
+	it('offers a link to the product and a direct-buy link', async () => {
+		renderCard();
+		await expect
+			.element(page.getByRole('button', { name: 'Share link to Red rose bouquet' }))
+			.toBeInTheDocument();
+		await expect
+			.element(page.getByRole('button', { name: 'Share buy link for Red rose bouquet' }))
+			.toBeInTheDocument();
+	});
+
+	it('has no buy link for a sold-out gift', async () => {
+		renderCard(gift({ stockQty: 0 }));
+		await expect
+			.element(page.getByRole('button', { name: 'Share buy link for Red rose bouquet' }))
+			.not.toBeInTheDocument();
 	});
 });

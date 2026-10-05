@@ -236,7 +236,6 @@
 	"install_ios_step2": "“Add to Home Screen” ን ይምረጡ።",
 	"install_ios_step3": "“Add” ን ይንኩ። አሞሪያ እንደ መተግበሪያ ይከፈታል።",
 	"install_close": "ገብቶኛል",
-	"nav_home": "መነሻ",
 	"nav_main": "ዋና ምናሌ",
 	"offline_banner": "ከመስመር ውጭ ነዎት። በዚህ መሣሪያ ላይ የተቀመጠውን እያሳየን ነው።",
 	"offline_title": "ከመስመር ውጭ ነዎት",
@@ -473,5 +472,13 @@
 	"cert_number": "የሰርተፍኬት ቁጥር {number}",
 	"cert_school": "አሞሪያ የዲኮር ትምህርት ቤት፣ መካኒሳ፣ አዲስ አበባ",
 	"cert_print": "ያትሙ ወይም እንደ PDF ያስቀምጡ",
-	"cert_back": "ወደ ምዝገባዎ ይመለሱ"
+	"cert_back": "ወደ ምዝገባዎ ይመለሱ",
+	"share_copied": "አገናኙ ተቀድቷል",
+	"share_failed": "አገናኙን መቅዳት አልተቻለም",
+	"share_product_link": "የ{name} አገናኝ አጋራ",
+	"share_buy_link": "የ{name} የመግዣ አገናኝ አጋራ",
+	"share_toggle": "{name}ን አጋራ",
+	"bag_share": "ቦርሳውን አጋራ",
+	"bag_share_title": "የእኔ የአሞሪያ ቦርሳ",
+	"bag_share_text": "በቦርሳዬ {count}: {total}"
 }

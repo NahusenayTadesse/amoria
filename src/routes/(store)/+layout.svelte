@@ -3,6 +3,7 @@
 	import '$lib/components/store/fonts.css';
 	import '$lib/components/store/store.css';
 	import SiteHeader from '$lib/components/store/SiteHeader.svelte';
+	import BagBar from '$lib/components/store/BagBar.svelte';
 	import TabBar from '$lib/components/store/TabBar.svelte';
 	import OfflineBanner from '$lib/components/store/OfflineBanner.svelte';
 	import InstallButton from '$lib/components/store/InstallButton.svelte';
@@ -122,7 +123,7 @@
 			<InstallButton class="max-sm:hidden" />
 		</div>
 	</footer>
-	{#if !tabsHidden}<TabBar />{/if}
+	{#if !tabsHidden}<BagBar /><TabBar />{/if}
 	<MoreSheet />
 	<InstallBanner />
 </div>
