@@ -7,11 +7,13 @@
 	import PayPanel from '$lib/components/store/PayPanel.svelte';
 	import PushOptIn from '$lib/components/store/PushOptIn.svelte';
 	import StatusPill from '$lib/components/store/StatusPill.svelte';
+	import { groupOrderItems } from '$lib/bundle';
 
 	let { data, form: actionData } = $props();
 
 	const order = $derived(data.order);
 	const delivered = $derived(order.fulfilment === 'delivery');
+	const lines = $derived(groupOrderItems(data.items));
 
 	/** The badge: a submitted receipt reads as its own state, though the order is still unpaid. */
 	const status = $derived.by(() => {
@@ -132,11 +134,25 @@
 	<section class="mt-10 border-t border-border pt-8">
 		<h2 class="display text-xl font-bold">{m.order_items()}</h2>
 		<ul class="mt-3 flex flex-col divide-y divide-border">
-			{#each data.items as item (item.id)}
-				<li class="flex items-baseline justify-between gap-4 py-3 text-sm">
-					<span>{item.qty} × {item.name}</span>
-					<span class="tabular-nums">{birr(item.lineTotal)}</span>
-				</li>
+			{#each lines as line (line.key)}
+				{#if line.kind === 'item'}
+					<li class="flex items-baseline justify-between gap-4 py-3 text-sm">
+						<span>{line.item.qty} × {line.item.name}</span>
+						<span class="tabular-nums">{birr(line.item.lineTotal)}</span>
+					</li>
+				{:else}
+					<li class="py-3 text-sm">
+						<div class="flex items-baseline justify-between gap-4">
+							<span>{line.qty} × {line.name}</span>
+							<span class="tabular-nums">{birr(line.lineTotal)}</span>
+						</div>
+						<ul class="mt-1 pl-4 text-xs text-muted-foreground">
+							{#each line.parts as part (part.id)}
+								<li>{part.qty} × {part.name}</li>
+							{/each}
+						</ul>
+					</li>
+				{/if}
 			{/each}
 		</ul>
 		{#if delivered}

@@ -15,6 +15,7 @@ export const access = createAccess({
 		{ prefix: '/dashboard/files/', permission: null },
 		{ prefix: '/dashboard/orders', permission: 'orders.view' },
 		{ prefix: '/dashboard/products', permission: 'catalog.manage' },
+		{ prefix: '/dashboard/bundles', permission: 'catalog.manage' },
 		{ prefix: '/dashboard/categories', permission: 'catalog.manage' },
 		// Specific stock prefixes first: the first match wins.
 		{ prefix: '/dashboard/stock/documents', permission: 'stock.adjust' },
@@ -28,8 +29,11 @@ export const access = createAccess({
 		{ prefix: '/dashboard/reports', permission: 'reports.view' },
 		{ prefix: '/dashboard/import', permission: 'data.import' },
 		{ prefix: '/dashboard/labels', permission: 'catalog.manage' },
+		{ prefix: '/dashboard/spaces', permission: 'catalog.manage' },
 		{ prefix: '/dashboard/school', permission: 'school.manage' },
 		{ prefix: '/dashboard/quote-requests', permission: 'quotes.manage' },
-		{ prefix: '/dashboard/settings', permission: 'settings.manage' }
+		{ prefix: '/dashboard/renters', permission: 'renters.manage' },
+		{ prefix: '/dashboard/settings', permission: 'settings.manage' },
+		{ prefix: '/dashboard/admin', permission: 'staff.manage' }
 	]
 });

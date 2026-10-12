@@ -9,7 +9,10 @@ import { sql } from 'drizzle-orm';
 import { db } from '$lib/server/db';
 import {
 	bankAccount,
+	bundle,
+	bundleItem,
 	category,
+	containerRule,
 	course,
 	courseIntake,
 	deliveryArea,
@@ -29,6 +32,12 @@ import type { Actor } from '$lib/server/services/payments/payable';
 /** Every table the app writes, children before parents is not needed: FK checks are off meanwhile. */
 const TABLES = [
 	'audit_log',
+	'renter_payment',
+	'renter_order',
+	'renter_listing_image',
+	'renter_listing',
+	'renter_bank_account',
+	'renter',
 	'pos_payment',
 	'stock_movement',
 	'stock_balance',
@@ -59,6 +68,10 @@ const TABLES = [
 	'course',
 	'school_shift',
 	'product_image',
+	'bundle_image',
+	'bundle_item',
+	'bundle',
+	'container_rule',
 	'package_image',
 	'decor_package',
 	'portfolio_image',
@@ -172,6 +185,50 @@ export async function makeProduct(
 			.insert(stockBalance)
 			.values({ locationId, productId: row.id, lotKey: 0, quantity: qty });
 	}
+	invalidate('catalog');
+	return row.id;
+}
+
+/** A published, active bundle of the given gifts, at `discountPercent` off. */
+export async function makeBundle(
+	items: { productId: number; qty: number }[],
+	overrides: Partial<typeof bundle.$inferInsert> = {}
+) {
+	const n = next();
+	const [row] = await db
+		.insert(bundle)
+		.values({
+			slug: `bundle-${n}`,
+			name: `Bundle ${n}`,
+			discountPercent: 0,
+			publishedAt: new Date(Date.now() - 60_000),
+			...overrides
+		})
+		.$returningId();
+	if (items.length) {
+		await db
+			.insert(bundleItem)
+			.values(items.map((item, sortOrder) => ({ ...item, bundleId: row.id, sortOrder })));
+	}
+	invalidate('catalog');
+	return row.id;
+}
+
+/** A rule on a container: up to `maxQty` of a category or of one gift. */
+export async function makeRule(
+	containerId: number,
+	rule: { categoryId?: number; productId?: number; minQty?: number; maxQty: number }
+) {
+	const [row] = await db
+		.insert(containerRule)
+		.values({
+			containerId,
+			categoryId: rule.categoryId ?? null,
+			productId: rule.productId ?? null,
+			minQty: rule.minQty ?? 0,
+			maxQty: rule.maxQty
+		})
+		.$returningId();
 	invalidate('catalog');
 	return row.id;
 }

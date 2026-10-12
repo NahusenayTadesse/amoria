@@ -3,6 +3,7 @@
 	import Check from '@lucide/svelte/icons/check';
 	import Copy from '@lucide/svelte/icons/copy';
 	import FileUpload from '@nahu/admin-kit/formComponents/FileUpload.svelte';
+	import * as RadioGroup from '@nahu/admin-kit/components/ui/radio-group/index.js';
 	import { m } from '$lib/paraglide/messages.js';
 	import { birr } from '$lib/localized';
 
@@ -98,63 +99,71 @@
 		Each account is both the details to transfer to and the choice of which one was used: the
 		customer picks the card they paid into, and copies its number from the same place.
 	-->
-	<fieldset class="flex flex-col gap-2">
-		<legend class="mb-2 text-sm font-medium text-foreground">{m.checkout_account_label()}</legend>
-		{#each accounts as account (account.id)}
-			{@const isCopied = copied === String(account.id)}
-			<div
-				class={[
-					'rounded-[var(--radius)] border bg-card p-4 transition-colors',
-					$form.bankAccountId === account.id
-						? 'border-[var(--am-ribbon)] ring-1 ring-[var(--am-ribbon)]'
-						: 'border-border'
-				]}
-			>
-				<label class="flex cursor-pointer items-start gap-3">
-					<input
-						type="radio"
-						name="bankAccountId"
-						value={account.id}
-						bind:group={$form.bankAccountId}
-						class="mt-1 accent-[var(--am-ribbon)]"
-					/>
-					<span class="flex flex-col gap-0.5">
-						<span class="text-sm font-semibold text-foreground">{account.bankName}</span>
-						<span class="text-sm text-muted-foreground">{account.accountName}</span>
-					</span>
-				</label>
-
-				<!-- The number, large, as one tap target: tap copies it (and picks this account). -->
-				<button
-					type="button"
-					onclick={() => copyAccount(account)}
-					aria-label={m.checkout_copy_number({ number: account.accountNumber })}
-					class="mt-3 flex w-full items-center justify-between gap-3 rounded-[calc(var(--radius)-4px)] bg-secondary px-4 py-3 text-left hover:bg-accent"
+	<div class="flex flex-col gap-2">
+		<span id="bank-account-label" class="mb-2 text-sm font-medium text-foreground"
+			>{m.checkout_account_label()}</span
+		>
+		<!-- The kit's radio group, so the account posts as `bankAccountId`; each card also copies its number. -->
+		<RadioGroup.Root
+			name="bankAccountId"
+			bind:value={
+				() => ($form.bankAccountId ? String($form.bankAccountId) : ''),
+				(v) => ($form.bankAccountId = Number(v))
+			}
+			aria-labelledby="bank-account-label"
+			aria-invalid={accountError ? 'true' : undefined}
+			class="gap-2"
+		>
+			{#each accounts as account (account.id)}
+				{@const isCopied = copied === String(account.id)}
+				<div
+					class={[
+						'rounded-[var(--radius)] border bg-card p-4 transition-colors',
+						$form.bankAccountId === account.id
+							? 'border-[var(--am-ribbon)] ring-1 ring-[var(--am-ribbon)]'
+							: 'border-border'
+					]}
 				>
-					<span class="text-lg font-semibold tracking-wide tabular-nums"
-						>{account.accountNumber}</span
+					<label for="account-{account.id}" class="flex cursor-pointer items-start gap-3">
+						<RadioGroup.Item id="account-{account.id}" value={String(account.id)} class="mt-1" />
+						<span class="flex flex-col gap-0.5">
+							<span class="text-sm font-semibold text-foreground">{account.bankName}</span>
+							<span class="text-sm text-muted-foreground">{account.accountName}</span>
+						</span>
+					</label>
+
+					<!-- The number, large, as one tap target: tap copies it (and picks this account). -->
+					<button
+						type="button"
+						onclick={() => copyAccount(account)}
+						aria-label={m.checkout_copy_number({ number: account.accountNumber })}
+						class="mt-3 flex w-full items-center justify-between gap-3 rounded-[calc(var(--radius)-4px)] bg-secondary px-4 py-3 text-left hover:bg-accent"
 					>
-					<span
-						class={[
-							'flex shrink-0 items-center gap-1.5 text-sm font-semibold',
-							isCopied ? 'text-[var(--am-ribbon)]' : 'text-foreground'
-						]}
-					>
-						{#if isCopied}
-							<Check class="h-4 w-4" aria-hidden="true" />
-							{m.checkout_copied()}
-						{:else}
-							<Copy class="h-4 w-4" aria-hidden="true" />
-							{m.checkout_copy()}
-						{/if}
-					</span>
-				</button>
-			</div>
-		{/each}
+						<span class="text-lg font-semibold tracking-wide tabular-nums"
+							>{account.accountNumber}</span
+						>
+						<span
+							class={[
+								'flex shrink-0 items-center gap-1.5 text-sm font-semibold',
+								isCopied ? 'text-[var(--am-ribbon)]' : 'text-foreground'
+							]}
+						>
+							{#if isCopied}
+								<Check class="h-4 w-4" aria-hidden="true" />
+								{m.checkout_copied()}
+							{:else}
+								<Copy class="h-4 w-4" aria-hidden="true" />
+								{m.checkout_copy()}
+							{/if}
+						</span>
+					</button>
+				</div>
+			{/each}
+		</RadioGroup.Root>
 		{#if accountError}
 			<p class="text-sm text-destructive" role="alert">{accountError}</p>
 		{/if}
-	</fieldset>
+	</div>
 
 	<!-- Announces the copy to screen readers; the button text already shows it. -->
 	<p class="sr-only" aria-live="polite">{copied ? m.checkout_copied() : ''}</p>

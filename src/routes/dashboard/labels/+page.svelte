@@ -1,4 +1,6 @@
 <script lang="ts">
+	import { Checkbox } from '@nahu/admin-kit/components/ui/checkbox/index.js';
+	import SelectComp from '@nahu/admin-kit/formComponents/SelectComp.svelte';
 	import { enhance } from '$app/forms';
 	import { resolve } from '$app/paths';
 	import Printer from '@lucide/svelte/icons/printer';
@@ -22,6 +24,9 @@
 	function toggleAll(on: boolean) {
 		for (const p of data.products) picked[p.id] = on;
 	}
+
+	/** The delivery whose labels to print. */
+	let delivery = $state<number | undefined>();
 </script>
 
 <div class="flex flex-col gap-4">
@@ -51,16 +56,21 @@
 			target="_blank"
 			class="flex flex-wrap items-end gap-3"
 		>
-			<label class="flex flex-col gap-1 text-sm">
-				<span class="text-muted-foreground">Delivery</span>
-				<select name="document" class="h-9 min-w-64 rounded-md border bg-background px-3" required>
-					<option value="">Choose a delivery…</option>
-					{#each data.deliveries as d (d.id)}
-						<option value={d.id}>{d.number} · {ethDay(d.docDate)}</option>
-					{/each}
-				</select>
-			</label>
-			<Button type="submit"><Printer /> Print labels</Button>
+			<div class="flex w-72 flex-col gap-1 text-sm">
+				<label for="labels-delivery" class="text-muted-foreground">Delivery</label>
+				<SelectComp
+					id="labels-delivery"
+					name="document"
+					label="Delivery"
+					placeholder="Choose a delivery…"
+					bind:value={delivery}
+					items={data.deliveries.map((d) => ({
+						value: d.id,
+						name: `${d.number} · ${ethDay(d.docDate)}`
+					}))}
+				/>
+			</div>
+			<Button type="submit" disabled={!delivery}><Printer /> Print labels</Button>
 		</form>
 	</PageSection>
 
@@ -84,11 +94,9 @@
 					<thead class="sticky top-0 bg-muted text-left text-muted-foreground">
 						<tr>
 							<th class="w-10 p-2">
-								<input
-									type="checkbox"
-									class="size-4 accent-primary"
+								<Checkbox
 									aria-label="Choose all shown"
-									onchange={(e) => toggleAll(e.currentTarget.checked)}
+									onCheckedChange={(checked) => toggleAll(checked)}
 								/>
 							</th>
 							<th class="p-2 font-medium">Product</th>
@@ -101,12 +109,10 @@
 						{#each data.products as p (p.id)}
 							<tr>
 								<td class="p-2">
-									<input
-										type="checkbox"
+									<Checkbox
 										name="ids"
-										value={p.id}
-										bind:checked={picked[p.id]}
-										class="size-4 accent-primary"
+										value={String(p.id)}
+										bind:checked={() => picked[p.id] ?? false, (v) => (picked[p.id] = v)}
 										aria-label="Print a label for {p.name}"
 									/>
 								</td>

@@ -98,8 +98,74 @@ derive "$STATIC/hero-bouquet.webp" "$UPLOADS/demo-course-bouquets-wrapping.webp"
 derive "$STATIC/hero-cake.webp" "$UPLOADS/demo-course-cake-dessert-tables.webp" 1000x750
 derive "$STATIC/gallery-long-table.webp" "$UPLOADS/demo-course-start-decor-business.webp" 1000x750
 
+echo "Bundles and their containers (square)"
+fetch 1733251691116-6695681566bb "$UPLOADS/demo-container-basket.webp" 800 800
+fetch 1773450970959-cef81e9b1053 "$UPLOADS/demo-container-crate.webp" 800 800
+fetch 1503652601-557d07733ddc "$UPLOADS/demo-bundle-build-basket.webp" 800 800
+fetch 1769286145156-70a40fff80ec "$UPLOADS/demo-bundle-build-basket-2.webp" 800 800
+fetch 1773450970959-cef81e9b1053 "$UPLOADS/demo-bundle-fill-crate.webp" 800 800
+fetch 1759420319818-1a2c8684a584 "$UPLOADS/demo-bundle-valentine.webp" 800 800
+fetch 1759420303135-0224b8d9b798 "$UPLOADS/demo-bundle-valentine-2.webp" 800 800
+fetch 1781263538938-561a5e1acc51 "$UPLOADS/demo-bundle-chocolate-basket.webp" 800 800
+fetch 1777196582906-81a99c692de2 "$UPLOADS/demo-bundle-chocolate-basket-2.webp" 800 800
+fetch 1674620213535-9b2a2553ef40 "$UPLOADS/demo-bundle-birthday.webp" 800 800
+fetch 1604668915840-580c30026e5f "$UPLOADS/demo-bundle-birthday-2.webp" 800 800
+fetch 1773450970981-793e2d72d820 "$UPLOADS/demo-bundle-gourmet.webp" 800 800
+fetch 1769738136033-827a76470a89 "$UPLOADS/demo-bundle-garden-party.webp" 800 800
+fetch 1786840506242-dc78b74790e2 "$UPLOADS/demo-bundle-keepsake-crate.webp" 800 800
+fetch 1604668915999-03e1269f6af6 "$UPLOADS/demo-bundle-balloons.webp" 800 800
+fetch 1508899203029-1c9eb493c9bd "$UPLOADS/demo-bundle-thank-you.webp" 800 800
+
 # Small copies of the gallery photos (480px wide) for phones; see $lib/img.ts.
 for photo in "$STATIC"/gallery-*.webp; do
 	case "$photo" in *-480.webp) continue ;; esac
 	magick "$photo" -resize 480x -quality 72 "${photo%.webp}-480.webp"
+done
+
+# Rental marketplace and Amoria's spaces (scripts/seed-dev-renters.sql)
+echo "Rentals (4:3), renter covers (3:1), logos and placeholder trade licences"
+# Amoria's own spaces: photos of real venues (a chandelier hall, a garden lawn and pergola, a party
+# room), each its own Unsplash photo rather than a crop of the décor gallery.
+fetch 1677768062274-fdd45caac233 "$UPLOADS/demo-space-grand-hall.webp" 1200 900
+fetch 1780542900375-0cf459e38fbb "$UPLOADS/demo-space-grand-hall-2.webp" 1200 900
+fetch 1748802633639-22f99d0b3a0c "$UPLOADS/demo-space-grand-hall-3.webp" 1200 900
+fetch 1759954644836-a57275881ded "$UPLOADS/demo-space-garden.webp" 1200 900
+fetch 1780245989879-1d0234b161de "$UPLOADS/demo-space-garden-2.webp" 1200 900
+fetch 1755704282977-340323fa52df "$UPLOADS/demo-space-studio.webp" 1200 900
+fetch 1768851244529-39180171a168 "$UPLOADS/demo-space-studio-2.webp" 1200 900
+fetch 1710880710213-a07ef77db5bd "$UPLOADS/demo-space-studio-3.webp" 1200 900
+for pair in \
+	amoria-gold-letters:gallery-gold-letters amoria-chandeliers:pf-cake-chandeliers \
+	amoria-drape-backdrop:gallery-hall-drapes amoria-flower-arch:pf-garden-arches \
+	selam-chiavari-chairs:gallery-aisle-chairs selam-ceremony-chairs:gallery-ceremony-chairs \
+	selam-banquet-tables:gallery-long-table selam-table-linens:gallery-floral-tables \
+	habesha-garden:gallery-garden-reception habesha-hall:pf-grand-banquet \
+	habesha-terrace:gallery-table-garden lumiere-chandelier-hall:pf-chandelier-hall \
+	lumiere-uplighting:gallery-evening-hall bloom-centrepieces:gallery-centerpiece \
+	bloom-balloon-arch:pf-birthday-arch bloom-garden-arch:pf-garden-arches \
+	bloom-flower-wall:pf-floral-tables; do
+	src=${pair#*:}
+	file="$STATIC/$src.webp"
+	[ -f "$file" ] || file="$UPLOADS/demo-$src.webp"
+	derive "$file" "$UPLOADS/demo-rent-${pair%%:*}.webp" 1000x750
+done
+for pair in amoria:gallery-hall-drapes selam:gallery-long-table habesha:gallery-garden-reception \
+	lumiere:gallery-evening-hall bloom:gallery-centerpiece adama:gallery-table-garden; do
+	derive "$STATIC/${pair#*:}.webp" "$UPLOADS/demo-renter-${pair%%:*}-cover.webp" 1500x500
+done
+# logo <slug> <initials> <colour>
+logo() {
+	magick -size 400x400 "xc:$3" -fill white -pointsize 150 -gravity center \
+		-annotate +0+0 "$2" -quality 85 "$UPLOADS/demo-renter-$1-logo.webp"
+	echo "  $UPLOADS/demo-renter-$1-logo.webp"
+}
+logo amoria A '#1f5c45'
+logo selam SE '#7a3e9d'
+logo habesha HG '#2e7d32'
+logo lumiere LL '#b8860b'
+logo bloom BD '#c2185b'
+logo adama AT '#1565c0'
+for slug in amoria selam habesha lumiere bloom adama; do
+	magick -size 1000x700 xc:white -fill '#333' -pointsize 44 -gravity center \
+		-annotate +0+0 "DEMO TRADE LICENCE\n$slug\n(not a real document)" "$UPLOADS/demo-licence-$slug.png"
 done

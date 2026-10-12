@@ -8,7 +8,8 @@ declare global {
 		/** Shallow-routing state: a sheet open over the page, closed by the Back button. */
 		interface PageState {
 			sheet?: 'more' | 'product';
-			productId?: number;
+			/** The open sheet's gift or bundle, by its shop key (`p12`, `b3`). */
+			productKey?: string;
 		}
 		interface Locals {
 			permList: string[];

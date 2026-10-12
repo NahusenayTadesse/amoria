@@ -6,6 +6,13 @@
 <script lang="ts">
 	import Check from '@lucide/svelte/icons/check';
 	import ChevronRight from '@lucide/svelte/icons/chevron-right';
+	import Gift from '@lucide/svelte/icons/gift';
+	import GraduationCap from '@lucide/svelte/icons/graduation-cap';
+	import House from '@lucide/svelte/icons/house';
+	import PartyPopper from '@lucide/svelte/icons/party-popper';
+	import Building2 from '@lucide/svelte/icons/building-2';
+	import Tent from '@lucide/svelte/icons/tent';
+	import Store from '@lucide/svelte/icons/store';
 	import Info from '@lucide/svelte/icons/info';
 	import Phone from '@lucide/svelte/icons/phone';
 	import * as Sheet from '@nahu/admin-kit/components/ui/sheet/index.js';
@@ -20,6 +27,18 @@
 		{ locale: 'en', label: 'English' },
 		{ locale: 'am', label: 'አማርኛ' }
 	] as const;
+
+	const pages = [
+		{ to: '/', label: m.nav_home, Icon: House },
+		{ to: '/shop', label: m.nav_shop, Icon: Gift },
+		{ to: '/school', label: m.nav_school, Icon: GraduationCap },
+		{ to: '/decor/quote', label: m.nav_decor, Icon: PartyPopper },
+		{ to: '/rentals', label: m.nav_rentals, Icon: Tent },
+		{ to: '/renters/join', label: m.nav_rent_out, Icon: Store },
+		{ to: '/spaces', label: m.nav_spaces, Icon: Building2 },
+		{ to: '/about', label: m.nav_about, Icon: Info },
+		{ to: '/contact', label: m.nav_contact, Icon: Phone }
+	];
 
 	const open = $derived(page.state.sheet === 'more');
 	const current = $derived(getLocale());
@@ -44,20 +63,15 @@
 		</Sheet.Header>
 
 		<div class="grid gap-1 px-3 pb-[max(1.25rem,env(safe-area-inset-bottom))]">
-			<a href={resolve(localizeHref('/about') as AppPath)} class={row}>
-				<span class="flex items-center gap-3">
-					<Info class="h-5 w-5 text-[var(--am-ribbon)]" aria-hidden="true" />
-					{m.nav_about()}
-				</span>
-				<ChevronRight class="h-4 w-4 text-muted-foreground" aria-hidden="true" />
-			</a>
-			<a href={resolve(localizeHref('/contact') as AppPath)} class={row}>
-				<span class="flex items-center gap-3">
-					<Phone class="h-5 w-5 text-[var(--am-ribbon)]" aria-hidden="true" />
-					{m.nav_contact()}
-				</span>
-				<ChevronRight class="h-4 w-4 text-muted-foreground" aria-hidden="true" />
-			</a>
+			{#each pages as { to, label, Icon } (to)}
+				<a href={resolve(localizeHref(to) as AppPath)} class={row}>
+					<span class="flex items-center gap-3">
+						<Icon class="h-5 w-5 text-[var(--am-ribbon)]" aria-hidden="true" />
+						{label()}
+					</span>
+					<ChevronRight class="h-4 w-4 text-muted-foreground" aria-hidden="true" />
+				</a>
+			{/each}
 
 			<div class="mt-3 px-3">
 				<p class="text-xs font-semibold tracking-[0.18em] text-muted-foreground uppercase">

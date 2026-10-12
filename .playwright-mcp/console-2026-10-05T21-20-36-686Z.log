@@ -1,0 +1,5 @@
+[   12594ms] [LOG] [vite] server connection lost. Polling for restart... @ http://localhost:5173/@vite/client:1030
+[  218684ms] [WARNING] %c[svelte] hydration_attribute_changed
+%cThe `src` attribute on `<img src="./images/demo/gallery-gold-letters-480.webp" alt="" width="480" height="720" loading="lazy" decoding="async" class="side-shot absolute w-28 rounded-2xl border-[5px] border-white object-cover shadow-[0_20px_40px_-20px_var(--am-ink)] top-[44%] left-[0.5rem] svelte-1xjukwb" style="--tilt: 5deg; --delay: 2.2s; --i: 7; aspect-ratio: 4 / 5">` changed its value between server and client renders. The client value, `/images/demo/gallery-table-garden-480.webp`, will be ignored in favour of the server value
+https://svelte.dev/e/hydration_attribute_changed font-weight: bold font-weight: normal @ http://localhost:5173/node_modules/@sveltejs/kit/src/runtime/client/client.js?v=e3fc2c2b:3440
+[  246663ms] [LOG] [vite] server connection lost. Polling for restart... @ http://localhost:5173/@vite/client:1030

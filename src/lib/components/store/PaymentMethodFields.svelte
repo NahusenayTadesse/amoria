@@ -1,5 +1,6 @@
 <script lang="ts">
 	import type { Writable } from 'svelte/store';
+	import InputComp from '@nahu/admin-kit/formComponents/InputComp.svelte';
 	import { m } from '$lib/paraglide/messages.js';
 	import TransferFields from './TransferFields.svelte';
 
@@ -46,33 +47,20 @@
 </script>
 
 <!-- Online or by transfer: the last thing asked before a guest pays (§0 pillar 2, step three). -->
-<fieldset class="flex flex-col gap-2">
-	<legend class="mb-2 text-sm font-medium">{m.checkout_method_label()}</legend>
-	{#each options as option (option.value)}
-		<label
-			class={[
-				'flex items-start gap-3 rounded-[var(--radius)] border bg-card p-4 transition-colors',
-				option.disabled ? 'cursor-not-allowed opacity-60' : 'cursor-pointer',
-				$form.method === option.value
-					? 'border-[var(--am-ribbon)] ring-1 ring-[var(--am-ribbon)]'
-					: 'border-border hover:border-foreground/40'
-			]}
-		>
-			<input
-				type="radio"
-				name="method"
-				value={option.value}
-				bind:group={$form.method}
-				disabled={option.disabled}
-				class="mt-1 accent-[var(--am-ribbon)]"
-			/>
-			<span class="flex flex-col gap-0.5">
-				<span class="text-sm font-semibold">{option.title}</span>
-				<span class="text-sm text-muted-foreground">{option.hint}</span>
-			</span>
-		</label>
-	{/each}
-</fieldset>
+<InputComp
+	{form}
+	{errors}
+	name="method"
+	type="imageSelect"
+	label={m.checkout_method_label()}
+	items={options.map((option) => ({
+		value: option.value,
+		name: option.title,
+		description: option.hint,
+		disabled: option.disabled
+	}))}
+	required
+/>
 
 {#if $form.method === 'transfer' && canTransfer}
 	<TransferFields

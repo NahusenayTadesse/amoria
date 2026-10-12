@@ -1,0 +1,390 @@
+- generic [ref=f7e2]:
+  - generic [ref=f7e3]:
+    - banner [ref=f7e4]:
+      - generic [ref=f7e5]:
+        - link "Amoria" [ref=f7e6] [cursor=pointer]:
+          - /url: ./
+        - navigation "Gift shop" [ref=f7e7]:
+          - link "Gift shop" [ref=f7e8] [cursor=pointer]:
+            - /url: ./shop
+          - link "School" [ref=f7e9] [cursor=pointer]:
+            - /url: ./school
+          - link "About" [ref=f7e10] [cursor=pointer]:
+            - /url: ./about
+          - link "Contact" [ref=f7e11] [cursor=pointer]:
+            - /url: ./contact
+        - group [ref=f7e12]:
+          - generic "Language" [ref=f7e13] [cursor=pointer]: EN
+    - main [ref=f7e20]:
+      - generic [ref=f7e22]:
+        - generic [ref=f7e23]:
+          - paragraph [ref=f7e24]: Mekanisa, Addis Ababa
+          - heading "Every celebration, beautifully dressed." [level=1] [ref=f7e26]:
+            - generic [ref=f7e27]: Every celebration,
+            - generic [ref=f7e29]: beautifully dressed.
+          - paragraph [ref=f7e31]: Event décor that turns a room into a memory, a shop of gifts worth giving, equipment to rent, and a school to learn the craft.
+          - generic [ref=f7e32]:
+            - link "Plan your décor" [ref=f7e33] [cursor=pointer]:
+              - /url: ./decor/quote
+            - link "Shop gifts" [ref=f7e36] [cursor=pointer]:
+              - /url: ./shop
+          - paragraph [ref=f7e37]: Pay with telebirr, CBE Birr or card. Collect from the shop or have it delivered.
+        - img [ref=f7e42]:
+          - generic [ref=f7e48]: A
+      - region "Celebrations we dress" [ref=f7e196]:
+        - generic [ref=f7e197]:
+          - list [ref=f7e198]:
+            - listitem [ref=f7e199]:
+              - generic [ref=f7e200]: Weddings
+              - generic [aria-hidden] [ref=f7e201]: ✦
+            - listitem [ref=f7e202]:
+              - generic [ref=f7e203]: Birthdays
+              - generic [aria-hidden] [ref=f7e204]: ✦
+            - listitem [ref=f7e205]:
+              - generic [ref=f7e206]: Engagements
+              - generic [aria-hidden] [ref=f7e207]: ✦
+            - listitem [ref=f7e208]:
+              - generic [ref=f7e209]: Baby showers
+              - generic [aria-hidden] [ref=f7e210]: ✦
+            - listitem [ref=f7e211]:
+              - generic [ref=f7e212]: Graduations
+              - generic [aria-hidden] [ref=f7e213]: ✦
+            - listitem [ref=f7e214]:
+              - generic [ref=f7e215]: Corporate events
+              - generic [aria-hidden] [ref=f7e216]: ✦
+          - list [aria-hidden] [ref=f7e217]:
+            - listitem [ref=f7e218]:
+              - generic [ref=f7e219]: Weddings
+              - generic [aria-hidden] [ref=f7e220]: ✦
+            - listitem [ref=f7e221]:
+              - generic [ref=f7e222]: Birthdays
+              - generic [aria-hidden] [ref=f7e223]: ✦
+            - listitem [ref=f7e224]:
+              - generic [ref=f7e225]: Engagements
+              - generic [aria-hidden] [ref=f7e226]: ✦
+            - listitem [ref=f7e227]:
+              - generic [ref=f7e228]: Baby showers
+              - generic [aria-hidden] [ref=f7e229]: ✦
+            - listitem [ref=f7e230]:
+              - generic [ref=f7e231]: Graduations
+              - generic [aria-hidden] [ref=f7e232]: ✦
+            - listitem [ref=f7e233]:
+              - generic [ref=f7e234]: Corporate events
+              - generic [aria-hidden] [ref=f7e235]: ✦
+      - generic [ref=f7e236]:
+        - generic [ref=f7e237]:
+          - paragraph [ref=f7e238]: What we do
+          - heading "Four ways we make it special" [level=2] [ref=f7e239]
+        - generic [ref=f7e240]:
+          - link "01 Event décor Weddings, birthdays, engagements and more. Tell us the day and the feeling; we design it, quote it and set it up. Get a quote" [ref=f7e241] [cursor=pointer]:
+            - /url: ./decor/quote
+            - generic [ref=f7e244]: "01"
+            - generic [ref=f7e250]:
+              - heading "Event décor" [level=3] [ref=f7e258]
+              - paragraph [ref=f7e259]: Weddings, birthdays, engagements and more. Tell us the day and the feeling; we design it, quote it and set it up.
+              - generic [ref=f7e260]: Get a quote
+          - link "02 Gift shop Gifts worth giving, wrapped the way they should be. Pay online, then collect in Mekanisa or have it delivered. Shop gifts" [ref=f7e261] [cursor=pointer]:
+            - /url: ./shop
+            - generic [ref=f7e267]:
+              - generic [ref=f7e268]:
+                - generic [ref=f7e269]: "02"
+                - heading "Gift shop" [level=3] [ref=f7e270]
+              - paragraph [ref=f7e271]: Gifts worth giving, wrapped the way they should be. Pay online, then collect in Mekanisa or have it delivered.
+              - generic [ref=f7e272]: Shop gifts
+          - link "03 Equipment rental Stands, linen, lighting and more for your own event. Pick your dates and see the price straight away. Ask about rentals" [ref=f7e275] [cursor=pointer]:
+            - /url: "#contact"
+            - generic [ref=f7e281]:
+              - generic [ref=f7e282]:
+                - generic [ref=f7e283]: "03"
+                - heading "Equipment rental" [level=3] [ref=f7e284]
+              - paragraph [ref=f7e285]: Stands, linen, lighting and more for your own event. Pick your dates and see the price straight away.
+              - generic [ref=f7e286]: Ask about rentals
+          - link "04 Décor school Learn the craft of event décor, one intake at a time. See the dates and how many seats are left. See the school" [ref=f7e289] [cursor=pointer]:
+            - /url: ./school
+            - generic [ref=f7e294]:
+              - generic [ref=f7e295]:
+                - generic [ref=f7e296]: "04"
+                - heading "Décor school" [level=3] [ref=f7e297]
+              - paragraph [ref=f7e298]: Learn the craft of event décor, one intake at a time. See the dates and how many seats are left.
+              - generic [ref=f7e299]: See the school
+      - generic [ref=f7e302]:
+        - generic [ref=f7e304]:
+          - generic [ref=f7e305]:
+            - paragraph [ref=f7e306]: From the shop
+            - heading "Gifts, ready to give" [level=2] [ref=f7e307]
+          - link "See every gift" [ref=f7e308] [cursor=pointer]:
+            - /url: ./shop
+        - list [ref=f7e312]:
+          - listitem [ref=f7e313]:
+            - link "A bouquet of red roses Staff pick Buy now Red rose bouquet ETB 1,450.00" [ref=f7e314] [cursor=pointer]:
+              - /url: ./buy/red-rose-bouquet
+              - generic [ref=f7e315]:
+                - img "A bouquet of red roses" [ref=f7e316]
+                - generic [ref=f7e317]: Staff pick
+                - generic [ref=f7e318]: Buy now
+              - heading "Red rose bouquet" [level=3] [ref=f7e319]
+              - paragraph [ref=f7e320]: ETB 1,450.00
+          - listitem [ref=f7e321]:
+            - link "An open box of assorted chocolates Staff pick Buy now Chocolate gift box ETB 1,200.00" [ref=f7e322] [cursor=pointer]:
+              - /url: ./buy/chocolate-gift-box
+              - generic [ref=f7e323]:
+                - img "An open box of assorted chocolates" [ref=f7e324]
+                - generic [ref=f7e325]: Staff pick
+                - generic [ref=f7e326]: Buy now
+              - heading "Chocolate gift box" [level=3] [ref=f7e327]
+              - paragraph [ref=f7e328]: ETB 1,200.00
+          - listitem [ref=f7e329]:
+            - link "A bundle of party balloons Staff pick Buy now Balloon bundle ETB 600.00" [ref=f7e330] [cursor=pointer]:
+              - /url: ./buy/balloon-bundle
+              - generic [ref=f7e331]:
+                - img "A bundle of party balloons" [ref=f7e332]
+                - generic [ref=f7e333]: Staff pick
+                - generic [ref=f7e334]: Buy now
+              - heading "Balloon bundle" [level=3] [ref=f7e335]
+              - paragraph [ref=f7e336]: ETB 600.00
+          - listitem [ref=f7e337]:
+            - link "A hand-tied bouquet of garden flowers Staff pick Buy now Garden bouquet ETB 950.00" [ref=f7e338] [cursor=pointer]:
+              - /url: ./buy/garden-bouquet
+              - generic [ref=f7e339]:
+                - img "A hand-tied bouquet of garden flowers" [ref=f7e340]
+                - generic [ref=f7e341]: Staff pick
+                - generic [ref=f7e342]: Buy now
+              - heading "Garden bouquet" [level=3] [ref=f7e343]
+              - paragraph [ref=f7e344]: ETB 950.00
+          - listitem [ref=f7e345]:
+            - link "A ribboned keepsake box Buy now Keepsake box ETB 1,100.00" [ref=f7e346] [cursor=pointer]:
+              - /url: ./buy/keepsake-box
+              - generic [ref=f7e347]:
+                - img "A ribboned keepsake box" [ref=f7e348]
+                - generic [ref=f7e349]: Buy now
+              - heading "Keepsake box" [level=3] [ref=f7e350]
+              - paragraph [ref=f7e351]: ETB 1,100.00
+          - listitem [ref=f7e352]:
+            - link "A birthday gift box with ribbon Buy now Birthday surprise box ETB 2,300.00" [ref=f7e353] [cursor=pointer]:
+              - /url: ./buy/birthday-surprise-box
+              - generic [ref=f7e354]:
+                - img "A birthday gift box with ribbon" [ref=f7e355]
+                - generic [ref=f7e356]: Buy now
+              - heading "Birthday surprise box" [level=3] [ref=f7e357]
+              - paragraph [ref=f7e358]: ETB 2,300.00
+      - generic [ref=f7e361]:
+        - generic [ref=f7e362]:
+          - paragraph [ref=f7e363]: How décor works
+          - heading "From first idea to unveiled" [level=2] [ref=f7e364]
+        - list [ref=f7e365]:
+          - listitem [ref=f7e366]:
+            - generic [ref=f7e368]: "1"
+            - heading "Tell us about it" [level=3] [ref=f7e369]
+            - paragraph [ref=f7e370]: The date, the place, the guests and the mood. It takes two minutes, no account needed.
+          - listitem [ref=f7e371]:
+            - generic [ref=f7e373]: "2"
+            - heading "We send your quote" [level=3] [ref=f7e374]
+            - paragraph [ref=f7e375]: Our team builds a clear, itemised quote for your event and sends it to you.
+          - listitem [ref=f7e376]:
+            - generic [ref=f7e378]: "3"
+            - heading "Pay the deposit, relax" [level=3] [ref=f7e379]
+            - paragraph [ref=f7e380]: Accept the quote, pay the deposit online, and we take it from there.
+        - link "Plan your décor" [ref=f7e382] [cursor=pointer]:
+          - /url: ./decor/quote
+      - generic [ref=f7e385]:
+        - generic [ref=f7e386]:
+          - paragraph [ref=f7e387]: Décor packages
+          - heading "Start from a package" [level=2] [ref=f7e388]
+        - generic [ref=f7e389]:
+          - article [ref=f7e390]:
+            - generic [ref=f7e391]:
+              - img "A wrapped bouquet of pink roses" [ref=f7e392]
+              - generic [ref=f7e393]: Basic
+            - generic [ref=f7e394]:
+              - paragraph [ref=f7e395]: Baby shower
+              - heading "Baby shower table" [level=3] [ref=f7e396]
+              - paragraph [ref=f7e397]: Soft colours, a balloon bunch and a flower-dressed treat table.
+              - list [ref=f7e398]:
+                - listitem [ref=f7e399]: Balloon bunches
+                - listitem [ref=f7e402]: Treat table styling
+                - listitem [ref=f7e405]: Fresh bouquet
+                - listitem [ref=f7e408]: Set-up and take-down
+              - generic [ref=f7e411]:
+                - generic [ref=f7e412]:
+                  - paragraph [ref=f7e413]: From
+                  - paragraph [ref=f7e414]: ETB 7,500.00
+                - link "Ask about this package" [ref=f7e415] [cursor=pointer]:
+                  - /url: "#contact"
+          - article [ref=f7e419]:
+            - generic [ref=f7e420]:
+              - img "A balloon arch over a birthday table" [ref=f7e421]
+              - generic [ref=f7e422]: Basic
+            - generic [ref=f7e423]:
+              - paragraph [ref=f7e424]: Birthday
+              - heading "Balloon party" [level=3] [ref=f7e425]
+              - paragraph [ref=f7e426]: A balloon arch, a backdrop and a cake table for a birthday at home or in a hall.
+              - list [ref=f7e427]:
+                - listitem [ref=f7e428]: Balloon arch in your colours
+                - listitem [ref=f7e431]: Name backdrop
+                - listitem [ref=f7e434]: Cake table styling
+                - listitem [ref=f7e437]: Set-up and take-down
+              - generic [ref=f7e440]:
+                - generic [ref=f7e441]:
+                  - paragraph [ref=f7e442]: From
+                  - paragraph [ref=f7e443]: ETB 8,500.00
+                - link "Ask about this package" [ref=f7e444] [cursor=pointer]:
+                  - /url: "#contact"
+          - article [ref=f7e448]:
+            - generic [ref=f7e449]:
+              - img "A curved light arch with white flowers" [ref=f7e450]
+              - generic [ref=f7e451]: Basic
+            - generic [ref=f7e452]:
+              - paragraph [ref=f7e453]: Graduation
+              - heading "Graduation photo corner" [level=3] [ref=f7e454]
+              - paragraph [ref=f7e455]: A cap-and-gown photo corner with balloons and a congratulations backdrop.
+              - list [ref=f7e456]:
+                - listitem [ref=f7e457]: Photo backdrop
+                - listitem [ref=f7e460]: Balloon arch
+                - listitem [ref=f7e463]: Table and signage
+                - listitem [ref=f7e466]: Set-up and take-down
+              - generic [ref=f7e469]:
+                - generic [ref=f7e470]:
+                  - paragraph [ref=f7e471]: From
+                  - paragraph [ref=f7e472]: ETB 9,000.00
+                - link "Ask about this package" [ref=f7e473] [cursor=pointer]:
+                  - /url: "#contact"
+      - generic [ref=f7e478]:
+        - generic [ref=f7e479]:
+          - paragraph [ref=f7e480]: Our work
+          - heading "Rooms we have dressed" [level=2] [ref=f7e481]
+        - list [ref=f7e482]:
+          - listitem [ref=f7e483]:
+            - figure [ref=f7e484]:
+              - img "Round tables dressed with tall flower centrepieces" [ref=f7e485]
+              - generic [ref=f7e486]:
+                - paragraph [ref=f7e487]: Wedding
+                - paragraph [ref=f7e488]: Floral reception tables
+          - listitem [ref=f7e489]:
+            - figure [ref=f7e490]:
+              - img "Flower arches in a garden" [ref=f7e491]
+              - generic [ref=f7e492]:
+                - paragraph [ref=f7e493]: Wedding
+                - paragraph [ref=f7e494]: Garden arches
+          - listitem [ref=f7e495]:
+            - figure [ref=f7e496]:
+              - img "A balloon arch for a birthday" [ref=f7e497]
+              - generic [ref=f7e498]:
+                - paragraph [ref=f7e499]: Birthday
+                - paragraph [ref=f7e500]: Birthday balloon arch
+          - listitem [ref=f7e501]:
+            - figure [ref=f7e502]:
+              - img "A wedding cake under chandeliers" [ref=f7e503]
+              - generic [ref=f7e504]:
+                - paragraph [ref=f7e505]: Wedding
+                - paragraph [ref=f7e506]: Cake under chandeliers
+          - listitem [ref=f7e507]:
+            - figure [ref=f7e508]:
+              - img "Long banquet tables set for guests" [ref=f7e509]
+              - generic [ref=f7e510]:
+                - paragraph [ref=f7e511]: Corporate event
+                - paragraph [ref=f7e512]: Grand banquet
+          - listitem [ref=f7e513]:
+            - figure [ref=f7e514]:
+              - img "A hall lit by chandeliers" [ref=f7e515]
+              - generic [ref=f7e516]:
+                - paragraph [ref=f7e517]: Engagement
+                - paragraph [ref=f7e518]: Chandelier hall
+      - generic [ref=f7e520]:
+        - generic [ref=f7e521]:
+          - paragraph [ref=f7e522]: Décor school
+          - heading "Learn the craft" [level=2] [ref=f7e523]
+          - paragraph [ref=f7e524]: Event décor is a skill you can learn. Choose a course, see the next start date and how many seats are left, and register when you are ready.
+          - link "Register now" [ref=f7e525] [cursor=pointer]:
+            - /url: ./school/demo-balloon-arches/register?class=2
+        - generic [ref=f7e528]:
+          - paragraph [ref=f7e529]: Next intake
+          - heading "Balloon arches and garlands" [level=3] [ref=f7e530]
+          - generic [ref=f7e531]:
+            - generic [ref=f7e532]:
+              - term [ref=f7e533]: Starts
+              - definition [ref=f7e534]: 12 Oct 2026 (2 ጥቅምት 2019)
+            - generic [ref=f7e535]:
+              - term [ref=f7e536]: Course fee
+              - definition [ref=f7e537]: ETB 4,500.00
+          - paragraph [ref=f7e540]: 12 seats left
+      - generic [ref=f7e542]:
+        - generic [ref=f7e543]:
+          - paragraph [ref=f7e544]: Gallery
+          - heading "Weddings, halls and gardens" [level=2] [ref=f7e545]
+          - paragraph [ref=f7e546]: "The kind of rooms we love to dress: draped halls, long tables, garden receptions and aisles lined with flowers."
+        - list [ref=f7e547]:
+          - listitem [ref=f7e548]:
+            - figure "A hall in soft drapes" [ref=f7e549]:
+              - img "A hall in soft drapes" [ref=f7e550]
+              - generic [aria-hidden] [ref=f7e551]: A hall in soft drapes
+          - listitem [ref=f7e552]:
+            - figure "Garden reception" [ref=f7e553]:
+              - img "Garden reception" [ref=f7e554]
+              - generic [aria-hidden] [ref=f7e555]: Garden reception
+          - listitem [ref=f7e556]:
+            - figure "Ready for the ceremony" [ref=f7e557]:
+              - img "Ready for the ceremony" [ref=f7e558]
+              - generic [aria-hidden] [ref=f7e559]: Ready for the ceremony
+          - listitem [ref=f7e560]:
+            - figure "Flowers on every table" [ref=f7e561]:
+              - img "Flowers on every table" [ref=f7e562]
+              - generic [aria-hidden] [ref=f7e563]: Flowers on every table
+          - listitem [ref=f7e564]:
+            - figure "Gold and candlelight" [ref=f7e565]:
+              - img "Gold and candlelight" [ref=f7e566]
+              - generic [aria-hidden] [ref=f7e567]: Gold and candlelight
+          - listitem [ref=f7e568]:
+            - figure "An aisle of flowers" [ref=f7e569]:
+              - img "An aisle of flowers" [ref=f7e570]
+              - generic [aria-hidden] [ref=f7e571]: An aisle of flowers
+          - listitem [ref=f7e572]:
+            - figure "The centrepiece" [ref=f7e573]:
+              - img "The centrepiece" [ref=f7e574]
+              - generic [aria-hidden] [ref=f7e575]: The centrepiece
+          - listitem [ref=f7e576]:
+            - figure "One long table" [ref=f7e577]:
+              - img "One long table" [ref=f7e578]
+              - generic [aria-hidden] [ref=f7e579]: One long table
+          - listitem [ref=f7e580]:
+            - figure "Tables under the trees" [ref=f7e581]:
+              - img "Tables under the trees" [ref=f7e582]
+              - generic [aria-hidden] [ref=f7e583]: Tables under the trees
+          - listitem [ref=f7e584]:
+            - figure "An evening hall" [ref=f7e585]:
+              - img "An evening hall" [ref=f7e586]
+              - generic [aria-hidden] [ref=f7e587]: An evening hall
+      - generic [ref=f7e589]:
+        - figure [ref=f7e590]:
+          - img "The Amoria shopfront in Mekanisa, with its gold lettering" [ref=f7e591]
+        - generic [ref=f7e593]:
+          - paragraph [ref=f7e594]: Visit the showroom
+          - heading "Come and see us in Mekanisa" [level=2] [ref=f7e595]
+          - paragraph [ref=f7e596]: Drop in to see our gifts, décor and rental pieces in person, and talk your event through with the team.
+          - 'img "Amoria: event, décor, and event and catering equipment rental" [ref=f7e597]'
+      - generic [ref=f7e600]:
+        - generic [ref=f7e601]:
+          - heading "Tell us about your celebration" [level=2] [ref=f7e602]
+          - paragraph [ref=f7e603]: Message us on WhatsApp or Telegram and we will reply with ideas and a price. Or come and see the shop in Mekanisa.
+        - paragraph [ref=f7e605]: Our chat details are coming soon. Visit the shop in the meantime.
+        - generic [ref=f7e611]:
+          - paragraph [ref=f7e612]: Visit us
+          - paragraph [ref=f7e613]: Mekanisa, Addis Ababa
+    - contentinfo [ref=f7e614]:
+      - 'img "Amoria: event, décor, and event and catering equipment rental" [ref=f7e615]'
+      - generic [ref=f7e616]:
+        - generic [ref=f7e617]:
+          - img "Amoria" [ref=f7e618]
+          - paragraph [ref=f7e619]: Amoria, Mekanisa, Addis Ababa
+          - paragraph [ref=f7e620]: Collect from the shop, or have it delivered in Addis Ababa.
+        - navigation "Explore" [ref=f7e621]:
+          - link "Home" [ref=f7e622] [cursor=pointer]:
+            - /url: ./
+          - link "Gift shop" [ref=f7e623] [cursor=pointer]:
+            - /url: ./shop
+          - link "School" [ref=f7e624] [cursor=pointer]:
+            - /url: ./school
+          - link "About" [ref=f7e625] [cursor=pointer]:
+            - /url: ./about
+          - link "Contact" [ref=f7e626] [cursor=pointer]:
+            - /url: ./contact
+  - region "Notifications alt+T"

@@ -34,6 +34,16 @@
 				<InputComp
 					{form}
 					{errors}
+					name="renterHoldHours"
+					type="number"
+					min="1"
+					max="168"
+					label="Hold unpaid marketplace bookings for (hours)"
+					description="Renters' customers pay by bank transfer; the dates free up after this."
+				/>
+				<InputComp
+					{form}
+					{errors}
 					name="lowStockDefault"
 					type="number"
 					min="0"
@@ -59,16 +69,15 @@
 					description="Above this the bag says how much more makes delivery free."
 				/>
 			</div>
-			<!-- A native checkbox: it posts `on` when ticked, which superforms reads as true, and nothing when not. -->
-			<label class="flex items-center gap-2 text-sm">
-				<input
-					type="checkbox"
-					name="deliveryEnabled"
-					bind:checked={$form.deliveryEnabled}
-					class="size-4 accent-primary"
-				/>
-				Offer delivery at checkout (needs at least one delivery area)
-			</label>
+			<InputComp
+				{form}
+				{errors}
+				name="deliveryEnabled"
+				type="checkboxSingle"
+				label="Offer delivery at checkout (needs at least one delivery area)"
+				placeholder="Offer delivery at checkout (needs at least one delivery area)"
+				hideLabel
+			/>
 		</FormCard>
 
 		<FormCard
@@ -103,24 +112,24 @@
 					description="Printed under every till receipt."
 				/>
 			</div>
-			<label class="flex items-center gap-2 text-sm">
-				<input
-					type="checkbox"
-					name="vatRegistered"
-					bind:checked={$form.vatRegistered}
-					class="size-4 accent-primary"
-				/>
-				The shop is registered for VAT
-			</label>
-			<label class="flex items-center gap-2 text-sm">
-				<input
-					type="checkbox"
-					name="pricesIncludeVat"
-					bind:checked={$form.pricesIncludeVat}
-					class="size-4 accent-primary"
-				/>
-				Shelf prices already include VAT
-			</label>
+			<InputComp
+				{form}
+				{errors}
+				name="vatRegistered"
+				type="checkboxSingle"
+				label="The shop is registered for VAT"
+				placeholder="The shop is registered for VAT"
+				hideLabel
+			/>
+			<InputComp
+				{form}
+				{errors}
+				name="pricesIncludeVat"
+				type="checkboxSingle"
+				label="Shelf prices already include VAT"
+				placeholder="Shelf prices already include VAT"
+				hideLabel
+			/>
 		</FormCard>
 
 		<FormCard title="Contact" description="Shown to customers.">

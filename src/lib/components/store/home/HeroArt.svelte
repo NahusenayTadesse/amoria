@@ -19,8 +19,8 @@
 
 	const balloons: Balloon[] = [];
 	const CX = 300;
-	const CY = 300;
-	const R = 190;
+	const CY = 330;
+	const R = 245;
 
 	// Over the top of the arch, left to right.
 	for (let i = 0; i <= 15; i++) {
@@ -28,7 +28,7 @@
 		balloons.push({
 			x: CX + R * Math.cos(a) + (rand(i) - 0.5) * 12,
 			y: CY - R * Math.sin(a) + (rand(i + 40) - 0.5) * 12,
-			r: 25 + rand(i + 9) * 17,
+			r: 38 + rand(i + 9) * 24,
 			tone: tones[(i * 5 + 1) % tones.length],
 			i
 		});
@@ -38,8 +38,8 @@
 		for (const side of [-1, 1]) {
 			balloons.push({
 				x: CX + side * R + (rand(j * side + 70) - 0.5) * 12,
-				y: CY + j * 62 + (rand(j + 90) - 0.5) * 10,
-				r: 34 - j * 4 + rand(j + side + 20) * 6,
+				y: CY + j * 64 + (rand(j + 90) - 0.5) * 10,
+				r: 52 - j * 4 + rand(j + side + 20) * 9,
 				tone: tones[(j * 3 + (side > 0 ? 2 : 0)) % tones.length],
 				i: 16 + j * 2 + (side > 0 ? 1 : 0)
 			});
@@ -49,9 +49,9 @@
 	for (let i = 1; i < 15; i += 2) {
 		const a = Math.PI - (i / 15) * Math.PI;
 		balloons.push({
-			x: CX + (R - 26) * Math.cos(a),
-			y: CY - (R - 26) * Math.sin(a) + 4,
-			r: 14 + rand(i + 130) * 7,
+			x: CX + (R - 40) * Math.cos(a),
+			y: CY - (R - 40) * Math.sin(a) + 4,
+			r: 22 + rand(i + 130) * 10,
 			tone: tones[(i + 3) % tones.length],
 			i: 30 + i
 		});
@@ -153,9 +153,9 @@
 
 		<!-- The arch itself: a pane of tissue, with a gold line drawn around it. -->
 		<g class="layer" style="--k: 5">
-			<path d="M110 610 V300 A190 190 0 0 1 490 300 V610 Z" fill="url(#g-arch)" class="arch-pane" />
+			<path d="M55 610 V330 A245 245 0 0 1 545 330 V610 Z" fill="url(#g-arch)" class="arch-pane" />
 			<path
-				d="M110 610 V300 A190 190 0 0 1 490 300 V610"
+				d="M55 610 V330 A245 245 0 0 1 545 330 V610"
 				fill="none"
 				stroke="url(#g-foil)"
 				stroke-width="2.5"
@@ -164,7 +164,7 @@
 				class="draw"
 			/>
 			<path
-				d="M92 610 V300 A208 208 0 0 1 508 300 V610"
+				d="M33 610 V330 A267 267 0 0 1 567 330 V610"
 				fill="none"
 				stroke="#b8892b"
 				stroke-opacity="0.45"
@@ -172,14 +172,14 @@
 				pathLength="1"
 				class="draw draw-late"
 			/>
-			<ellipse cx="300" cy="618" rx="250" ry="14" fill="#0c2a1d" opacity="0.08" class="ground" />
+			<ellipse cx="300" cy="618" rx="280" ry="14" fill="#0c2a1d" opacity="0.08" class="ground" />
 		</g>
 
 		<!-- The monogram, in the gold of the ribbon. -->
 		<g class="layer" style="--k: 9">
 			<text
 				x="300"
-				y="500"
+				y="520"
 				text-anchor="middle"
 				class="mono accent"
 				font-size="250"

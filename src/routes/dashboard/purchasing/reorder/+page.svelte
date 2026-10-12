@@ -1,4 +1,6 @@
 <script lang="ts">
+	import { Checkbox } from '@nahu/admin-kit/components/ui/checkbox/index.js';
+	import SelectComp from '@nahu/admin-kit/formComponents/SelectComp.svelte';
 	import { resolve } from '$app/paths';
 	import { enhance } from '$app/forms';
 	import PageHeader from '@nahu/admin-kit/components/PageHeader.svelte';
@@ -21,6 +23,9 @@
 	);
 	const chosen = $derived(data.suggestions.filter((s) => ticked[s.id] && amounts[s.id] > 0));
 	const withoutSupplier = $derived(data.suggestions.filter((s) => !s.supplierId));
+
+	/** The location picker's form: a choice re-plans at once. */
+	let planForm = $state<HTMLFormElement>();
 </script>
 
 <div class="flex flex-col gap-4">
@@ -30,20 +35,18 @@
 		description="Products at or under their reorder level, or that will run out before a delivery could arrive at the recent rate of use. Ticked rows become one draft order per supplier."
 	/>
 
-	<form method="GET" class="flex flex-wrap items-end gap-3 text-sm">
-		<label class="flex flex-col gap-1">
-			<span class="text-muted-foreground">Plan for</span>
-			<select
+	<form method="GET" bind:this={planForm} class="flex flex-wrap items-end gap-3 text-sm">
+		<div class="flex w-80 flex-col gap-1">
+			<label for="plan-location" class="text-muted-foreground">Plan for</label>
+			<SelectComp
+				id="plan-location"
 				name="location"
-				class="h-9 rounded-md border bg-background px-3"
-				onchange={(e) => e.currentTarget.form?.submit()}
-			>
-				<option value="">Everywhere (each product's own level)</option>
-				{#each data.locations as l (l.value)}
-					<option value={l.value} selected={data.locationId === l.value}>{l.name}</option>
-				{/each}
-			</select>
-		</label>
+				label="Plan for"
+				value={data.locationId ?? ''}
+				items={[{ value: '', name: "Everywhere (each product's own level)" }, ...data.locations]}
+				onValueChange={() => queueMicrotask(() => planForm?.requestSubmit())}
+			/>
+		</div>
 		<noscript><Button type="submit" variant="outline" size="sm">Show</Button></noscript>
 	</form>
 
@@ -81,14 +84,12 @@
 						{#each data.suggestions as s (s.id)}
 							<tr class={!s.supplierId ? 'opacity-60' : ''}>
 								<td class="p-2">
-									<input
-										type="checkbox"
+									<Checkbox
 										name="pick"
-										value={s.id}
-										bind:checked={ticked[s.id]}
+										value={String(s.id)}
+										bind:checked={() => ticked[s.id] ?? false, (v) => (ticked[s.id] = v)}
 										disabled={!s.supplierId}
 										aria-label="Order {s.name}"
-										class="size-4 accent-primary"
 									/>
 								</td>
 								<td class="p-2">

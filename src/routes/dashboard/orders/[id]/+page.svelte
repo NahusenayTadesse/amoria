@@ -1,4 +1,5 @@
 <script lang="ts">
+	import HiddenField from '@nahu/admin-kit/formComponents/HiddenField.svelte';
 	import { resolve } from '$app/paths';
 	import { enhance } from '$app/forms';
 	import Truck from '@lucide/svelte/icons/truck';
@@ -17,10 +18,12 @@
 	import { STOCK_REASON_META } from '$lib/stock';
 	import { quick } from '$lib/quick';
 	import PaymentsCard from '$lib/components/dashboard/PaymentsCard.svelte';
+	import { groupOrderItems } from '$lib/bundle';
 
 	let { data } = $props();
 
 	const order = $derived(data.order);
+	const lines = $derived(groupOrderItems(data.items));
 	const nextSteps = $derived(ORDER_TRANSITIONS[order.status]);
 	const waitingReceipts = $derived(
 		data.payments.filter((p) => p.provider === 'bank_transfer' && p.status === 'initiated')
@@ -62,7 +65,7 @@
 					use:enhance={quick}
 					onsubmit={to === 'cancelled' ? confirmCancel : undefined}
 				>
-					<input type="hidden" name="to" value={to} />
+					<HiddenField name="to" value={to} />
 					<Button type="submit" variant={to === 'cancelled' ? 'outline' : 'default'} size="sm">
 						{ORDER_ACTION_LABELS[to] ?? to}
 					</Button>
@@ -93,19 +96,53 @@
 						>
 					</thead>
 					<tbody class="divide-y">
-						{#each data.items as item (item.id)}
-							<tr>
-								<td class="py-2"
-									><a
-										class="hover:underline"
-										href={resolve('/dashboard/products/[id]', { id: String(item.productId) })}
-										>{item.nameSnapshot}</a
-									></td
-								>
-								<td class="py-2 text-right tabular-nums">{item.qty}</td>
-								<td class="py-2 text-right tabular-nums">{formatETB(item.unitPrice)}</td>
-								<td class="py-2 text-right tabular-nums">{formatETB(item.lineTotal)}</td>
-							</tr>
+						{#each lines as line (line.key)}
+							{#if line.kind === 'item'}
+								{@const item = line.item}
+								<tr>
+									<td class="py-2"
+										><a
+											class="hover:underline"
+											href={resolve('/dashboard/products/[id]', { id: String(item.productId) })}
+											>{item.nameSnapshot}</a
+										></td
+									>
+									<td class="py-2 text-right tabular-nums">{item.qty}</td>
+									<td class="py-2 text-right tabular-nums">{formatETB(item.unitPrice)}</td>
+									<td class="py-2 text-right tabular-nums">{formatETB(item.lineTotal)}</td>
+								</tr>
+							{:else}
+								<tr>
+									<td class="py-2 font-medium"
+										><a
+											class="hover:underline"
+											href={resolve('/dashboard/bundles/[id]', { id: String(line.bundleId) })}
+											>{line.name}</a
+										>
+										<span class="text-xs font-normal text-muted-foreground">bundle</span></td
+									>
+									<td class="py-2 text-right tabular-nums">{line.qty}</td>
+									<td class="py-2 text-right tabular-nums"
+										>{formatETB(Math.round((line.lineTotal / line.qty) * 100) / 100)}</td
+									>
+									<td class="py-2 text-right tabular-nums">{formatETB(line.lineTotal)}</td>
+								</tr>
+								{#each line.parts as item (item.id)}
+									<tr class="border-t-0 text-muted-foreground">
+										<td class="py-1 pl-4"
+											><a
+												class="hover:underline"
+												href={resolve('/dashboard/products/[id]', { id: String(item.productId) })}
+												>{item.nameSnapshot}</a
+											></td
+										>
+										<td class="py-1 text-right tabular-nums">{item.qty}</td>
+										<td class="py-1 text-right text-xs tabular-nums" colspan="2"
+											>share {formatETB(item.lineTotal)}</td
+										>
+									</tr>
+								{/each}
+							{/if}
 						{/each}
 					</tbody>
 					<tfoot class="tabular-nums">

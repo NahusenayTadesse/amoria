@@ -1,4 +1,6 @@
 <script lang="ts">
+	import HiddenField from '@nahu/admin-kit/formComponents/HiddenField.svelte';
+	import SelectComp from '@nahu/admin-kit/formComponents/SelectComp.svelte';
 	import { enhance } from '$app/forms';
 	import { resolve } from '$app/paths';
 	import type { AppPath } from '$lib/paths';
@@ -54,18 +56,16 @@
 			class="flex flex-col gap-3"
 		>
 			<div class="flex flex-wrap items-end gap-3">
-				<label class="flex flex-col gap-1 text-sm">
-					<span class="text-muted-foreground">What is in the file</span>
-					<select
+				<div class="flex w-56 flex-col gap-1 text-sm">
+					<label for="import-kind" class="text-muted-foreground">What is in the file</label>
+					<SelectComp
+						id="import-kind"
 						name="kind"
+						label="What is in the file"
 						bind:value={kind}
-						class="h-9 min-w-48 rounded-md border bg-background px-3"
-					>
-						{#each data.kinds as k (k.kind)}
-							<option value={k.kind}>{k.name}</option>
-						{/each}
-					</select>
-				</label>
+						items={data.kinds.map((k) => ({ value: k.kind, name: k.name }))}
+					/>
+				</div>
 				<label class="flex flex-col gap-1 text-sm">
 					<span class="text-muted-foreground">Excel (.xlsx) or CSV, up to 5 MB</span>
 					<Input type="file" name="file" accept=".xlsx,.csv,.txt" class="h-9 w-72" required />
@@ -149,8 +149,8 @@
 
 			{#if preview.plan.problems === 0}
 				<form method="POST" action="?/confirm" use:enhance={submit} class="mt-3">
-					<input type="hidden" name="kind" value={preview.kind} />
-					<input type="hidden" name="rows" value={JSON.stringify(preview.rows)} />
+					<HiddenField name="kind" value={preview.kind} />
+					<HiddenField name="rows" value={JSON.stringify(preview.rows)} />
 					<Button type="submit" disabled={busy}>
 						{busy ? 'Importing…' : `Import ${preview.plan.rows.length} rows`}
 					</Button>

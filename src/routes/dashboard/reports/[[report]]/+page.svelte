@@ -1,4 +1,7 @@
 <script lang="ts">
+	import { Input } from '@nahu/admin-kit/components/ui/input/index.js';
+	import SelectComp from '@nahu/admin-kit/formComponents/SelectComp.svelte';
+	import HiddenField from '@nahu/admin-kit/formComponents/HiddenField.svelte';
 	import { page } from '$app/state';
 	import { SvelteURL } from 'svelte/reactivity';
 	import { resolve } from '$app/paths';
@@ -243,6 +246,9 @@
 		format: 'money' | 'count',
 		extra: { tone?: 'positive' | 'negative' | 'neutral' | 'warning'; hint?: string } = {}
 	) => ({ key, label, value, format, group: 'reports', ...extra });
+
+	/** The product picker's form: a choice shows its trend at once. */
+	let trendForm = $state<HTMLFormElement>();
 </script>
 
 <div class="flex flex-col gap-4">
@@ -420,13 +426,7 @@
 		<form method="GET" class="flex flex-wrap items-end gap-3 text-sm">
 			<label class="flex flex-col gap-1">
 				<span class="text-muted-foreground">Not used for at least (days)</span>
-				<input
-					name="idle"
-					type="number"
-					min="1"
-					value={v.days}
-					class="h-9 w-32 rounded-md border bg-background px-3"
-				/>
+				<Input name="idle" type="number" min="1" value={v.days} class="h-9 w-32" />
 			</label>
 			<button class="h-9 rounded-md border px-3 hover:bg-accent" type="submit">Show</button>
 		</form>
@@ -454,22 +454,21 @@
 		<DataTable data={data.view.rows} columns={outColumns} fileName="Stock-outs" />
 	{:else if data.view.kind === 'trend'}
 		{@const v = data.view}
-		<form method="GET" class="flex flex-wrap items-end gap-3 text-sm">
-			<input type="hidden" name="from" value={data.period.from} />
-			<input type="hidden" name="to" value={data.period.to} />
-			<label class="flex flex-col gap-1">
-				<span class="text-muted-foreground">Product</span>
-				<select
+		<form method="GET" bind:this={trendForm} class="flex flex-wrap items-end gap-3 text-sm">
+			<HiddenField name="from" value={data.period.from} />
+			<HiddenField name="to" value={data.period.to} />
+			<div class="flex min-w-64 flex-col gap-1">
+				<label for="trend-product" class="text-muted-foreground">Product</label>
+				<SelectComp
+					id="trend-product"
 					name="product"
-					class="h-9 min-w-64 rounded-md border bg-background px-3"
-					onchange={(e) => e.currentTarget.form?.submit()}
-				>
-					<option value="">Choose a product…</option>
-					{#each v.products as p (p.value)}
-						<option value={p.value} selected={v.productId === p.value}>{p.name}</option>
-					{/each}
-				</select>
-			</label>
+					label="Product"
+					placeholder="Choose a product…"
+					value={v.productId ?? undefined}
+					items={v.products}
+					onValueChange={() => queueMicrotask(() => trendForm?.requestSubmit())}
+				/>
+			</div>
 		</form>
 		{#if v.trend}
 			<ReportChart

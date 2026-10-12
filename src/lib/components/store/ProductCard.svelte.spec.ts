@@ -7,7 +7,9 @@ import ProductCard from './ProductCard.svelte';
 import WithBag from './testing/WithBag.svelte';
 
 const gift = (overrides: Record<string, unknown> = {}) => ({
+	kind: 'product' as const,
 	id: 1,
+	key: 'p1',
 	slug: 'red-rose-bouquet',
 	name: 'Red rose bouquet',
 	nameAm: 'የቀይ ጽጌረዳ እቅፍ',
@@ -51,12 +53,12 @@ describe('ProductCard', () => {
 		await page.getByRole('button', { name: 'Add Red rose bouquet to bag' }).click();
 		const more = page.getByRole('button', { name: 'One more Red rose bouquet' });
 		await more.click();
-		expect(bag.qtyOf(1)).toBe(2);
+		expect(bag.qtyOf('p1')).toBe(2);
 		await expect.element(more).toBeDisabled();
 
 		await page.getByRole('button', { name: 'One fewer Red rose bouquet' }).click();
 		await page.getByRole('button', { name: 'One fewer Red rose bouquet' }).click();
-		expect(bag.qtyOf(1)).toBe(0);
+		expect(bag.qtyOf('p1')).toBe(0);
 		await expect
 			.element(page.getByRole('button', { name: 'Add Red rose bouquet to bag' }))
 			.toBeInTheDocument();
@@ -96,5 +98,21 @@ describe('ProductCard sharing', () => {
 		await expect
 			.element(page.getByRole('button', { name: 'Share buy link for Red rose bouquet' }))
 			.not.toBeInTheDocument();
+	});
+
+	it('shows a bundle as a bundle: how many gifts, the full price struck through, the saving', async () => {
+		renderCard(
+			gift({
+				kind: 'bundle',
+				key: 'b1',
+				name: 'Valentine box',
+				price: 1800,
+				bundle: { items: [{}, {}, {}], fullPrice: 2000, discountPercent: 10 }
+			})
+		);
+		await expect.element(page.getByText('Bundle · 3 gifts')).toBeInTheDocument();
+		await expect.element(page.getByText('ETB 1,800.00')).toBeInTheDocument();
+		await expect.element(page.getByText('ETB 2,000.00')).toBeInTheDocument();
+		await expect.element(page.getByText('Save 10%')).toBeInTheDocument();
 	});
 });

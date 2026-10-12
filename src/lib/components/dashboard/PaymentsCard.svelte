@@ -1,4 +1,5 @@
 <script lang="ts">
+	import HiddenField from '@nahu/admin-kit/formComponents/HiddenField.svelte';
 	import type { SuperValidated } from 'sveltekit-superforms';
 	import { enhance } from '$app/forms';
 	import { resolve } from '$app/paths';
@@ -154,7 +155,7 @@
 						{/if}
 						{#if canRecord && p.provider === 'bank_transfer' && p.status === 'initiated'}
 							<form method="POST" action="?/confirmReceipt" use:enhance={quick}>
-								<input type="hidden" name="paymentId" value={p.id} />
+								<HiddenField name="paymentId" value={p.id} />
 								<Button type="submit" size="sm">Money arrived: confirm</Button>
 							</form>
 							<Button
@@ -181,8 +182,8 @@
 	hideTrigger
 	submitLabel="Reject receipt"
 >
-	{#snippet fields({ form, errors, values })}
-		<input type="hidden" name="paymentId" value={values.paymentId} />
+	{#snippet fields({ form, errors })}
+		<InputComp {form} {errors} name="paymentId" type="hidden" />
 		<InputComp
 			{form}
 			{errors}

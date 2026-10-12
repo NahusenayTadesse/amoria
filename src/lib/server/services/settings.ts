@@ -17,6 +17,11 @@ const schema = z.object({
 		.catch(30),
 	quoteValidDays: z.coerce.number().int().min(1).catch(14),
 	rentalReminderDays: z.coerce.number().int().min(0).catch(1),
+	/**
+	 * Marketplace bookings (§5.12) are paid by bank transfer to the renter, which takes longer than
+	 * Chapa: how long an unpaid booking holds its dates before they are released.
+	 */
+	renterHoldHours: z.coerce.number().int().min(1).max(168).catch(24),
 	depositPercent: z.coerce.number().min(0).max(100).catch(50),
 	lowStockDefault: z.coerce.number().int().min(0).catch(3),
 	/**

@@ -2,6 +2,7 @@ import { giftProducts } from '$lib/server/services/catalog';
 import { schoolCourses } from '$lib/server/services/school';
 import { getSettings, publicContact } from '$lib/server/services/settings';
 import { homePackages, homePortfolio } from '$lib/server/services/home';
+import { showcaseListings } from '$lib/server/services/marketplace';
 
 /**
  * The home page (§10): the four businesses, then what each has on show. Everything below the
@@ -9,7 +10,7 @@ import { homePackages, homePortfolio } from '$lib/server/services/home';
  * so a shop that has only stocked gifts still has a whole page.
  */
 export const load = async () => {
-	const [gifts, packages, portfolio, courses, settings] = await Promise.all([
+	const [gifts, packages, portfolio, courses, settings, rentals] = await Promise.all([
 		giftProducts().catch((err) => {
 			console.error('Home: gifts:', err);
 			return [];
@@ -20,7 +21,11 @@ export const load = async () => {
 			console.error('Home: school:', err);
 			return [];
 		}),
-		getSettings()
+		getSettings(),
+		showcaseListings(8).catch((err) => {
+			console.error('Home: rentals:', err);
+			return [];
+		})
 	]);
 
 	// Staff picks first (the list arrives that way), then the newest, six in all.
@@ -56,6 +61,7 @@ export const load = async () => {
 		featured,
 		packages,
 		portfolio,
+		rentals,
 		intake: intake ?? null,
 		contact: publicContact(settings)
 	};

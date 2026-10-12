@@ -5,6 +5,8 @@
 	import type { DateRange } from '$lib/schoolPlan';
 	import type { SchoolIntake } from '$lib/server/services/school';
 	import SeatsLeft from './SeatsLeft.svelte';
+	import HiddenField from '@nahu/admin-kit/formComponents/HiddenField.svelte';
+	import * as RadioGroup from '@nahu/admin-kit/components/ui/radio-group/index.js';
 
 	type Props = {
 		/** The next date ranges, each with its classes (one per shift). */
@@ -47,14 +49,14 @@
 <!--
 	Two steps in one small space: the date ranges as chips along a row, then the chosen range's
 	shifts as cards. A class with no place left is shown (so the guest can see the morning is taken)
-	but cannot be picked. The posted value is the hidden input, so only what is chosen is sent.
+	but cannot be picked. The posted value is the kit's hidden field, so only what is chosen is sent.
 -->
 <fieldset
 	class="flex min-w-0 flex-col gap-4"
 	aria-describedby={error ? `${name}-error` : undefined}
 >
 	<legend class="sr-only">{m.reg_pick_heading()}</legend>
-	<input type="hidden" {name} value={value ?? ''} />
+	<HiddenField {name} {value} />
 
 	<div
 		role="tablist"
@@ -98,11 +100,17 @@
 					: bothCalendarsOnDay(active.startDate)}
 			</p>
 
-			<div class="mt-3 grid gap-2 sm:grid-cols-2">
+			<RadioGroup.Root
+				name="{name}-shift"
+				bind:value={() => (value ? String(value) : ''), (v) => (value = Number(v))}
+				aria-label={m.reg_pick_heading()}
+				class="mt-3 grid gap-2 sm:grid-cols-2"
+			>
 				{#each active.classes as c (c.id)}
 					{@const disabled = c.seatsLeft <= 0}
 					{@const checked = value === c.id}
 					<label
+						for="class-{c.id}"
 						class={[
 							'relative flex min-h-16 items-center justify-between gap-3 rounded-2xl border p-3.5 transition-colors',
 							disabled
@@ -111,14 +119,11 @@
 							checked && 'border-[var(--am-ribbon)] bg-[#e6f1e9]/50 ring-1 ring-[var(--am-ribbon)]'
 						]}
 					>
-						<input
-							type="radio"
-							class="peer sr-only"
-							name="{name}-shift"
-							value={c.id}
+						<RadioGroup.Item
+							id="class-{c.id}"
+							value={String(c.id)}
 							{disabled}
-							{checked}
-							onchange={() => (value = c.id)}
+							class="peer sr-only"
 						/>
 						<span class="min-w-0">
 							<span class={['block font-semibold', disabled && 'text-muted-foreground']}>
@@ -146,7 +151,7 @@
 						</span>
 					</label>
 				{/each}
-			</div>
+			</RadioGroup.Root>
 		</div>
 	{/if}
 	{#if error}

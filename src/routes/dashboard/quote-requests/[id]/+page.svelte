@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { Checkbox } from '@nahu/admin-kit/components/ui/checkbox/index.js';
 	import { enhance } from '$app/forms';
 	import { resolve } from '$app/paths';
 	import type { AppPath } from '$lib/paths';
@@ -109,8 +110,8 @@
 						size="sm">{QUOTE_REQUEST_LABELS[status]}</Button
 					>
 				{/each}
-				<label class="ml-2 flex items-center gap-2 text-sm">
-					<input type="checkbox" name="assign" value="me" checked={!request.assignedTo} />
+				<label for="assign-me" class="ml-2 flex items-center gap-2 text-sm">
+					<Checkbox id="assign-me" name="assign" value="me" checked={!request.assignedTo} />
 					Assign to me
 				</label>
 			</form>

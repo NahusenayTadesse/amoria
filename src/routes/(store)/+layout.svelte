@@ -30,8 +30,10 @@
 		return () => removeEventListener('online', retry);
 	});
 
-	/** The registration form pins its own pay button to the bottom, so the tab bar steps aside. */
-	const tabsHidden = $derived(/^\/school\/[^/]+\/register/.test(deLocalizeHref(page.url.pathname)));
+	/** Registration and the package builder pin their own button to the bottom, so the tab bar steps aside. */
+	const tabsHidden = $derived(
+		/^\/(school\/[^/]+\/register|shop\/build)/.test(deLocalizeHref(page.url.pathname))
+	);
 
 	const sign = responsive('/images/shop/sign-am.webp', 640, 1280);
 
@@ -51,6 +53,9 @@
 		{ to: '/', label: m.nav_home },
 		{ to: '/shop', label: m.nav_shop },
 		{ to: '/school', label: m.nav_school },
+		{ to: '/decor/quote', label: m.nav_decor },
+		{ to: '/rentals', label: m.nav_rentals },
+		{ to: '/spaces', label: m.nav_spaces },
 		{ to: '/about', label: m.nav_about },
 		{ to: '/contact', label: m.nav_contact }
 	];

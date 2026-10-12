@@ -15,16 +15,16 @@
 	const sideImg = $derived(responsive(side.src, side.small, side.w));
 </script>
 
-<div class="relative mx-auto aspect-[4/4.2] w-full max-w-[34rem]">
+<div class="relative mx-auto aspect-[4/4.6] w-full max-w-[38rem]">
 	<img
 		src={mainImg.src}
 		srcset={mainImg.srcset}
-		sizes="(min-width: 1024px) 460px, 80vw"
+		sizes="(min-width: 1024px) 520px, 80vw"
 		alt=""
 		width={main.w}
 		height={main.h}
 		decoding="async"
-		class="absolute top-0 left-0 h-[78%] w-[82%] -rotate-2 rounded-[1.5rem] border-[6px] border-white object-cover shadow-[0_30px_60px_-30px_var(--am-ink)]"
+		class="absolute top-0 left-0 h-[80%] w-[86%] -rotate-2 rounded-[1.5rem] border-[6px] border-white object-cover shadow-[0_30px_60px_-30px_var(--am-ink)]"
 	/>
 	<img
 		src={sideImg.src}
@@ -35,6 +35,6 @@
 		height={side.h}
 		loading="lazy"
 		decoding="async"
-		class="absolute right-0 bottom-0 h-[52%] w-[48%] rotate-3 rounded-[1.25rem] border-[6px] border-white object-cover shadow-[0_24px_50px_-24px_var(--am-ink)]"
+		class="absolute right-0 bottom-0 h-[54%] w-[50%] rotate-3 rounded-[1.25rem] border-[6px] border-white object-cover shadow-[0_24px_50px_-24px_var(--am-ink)]"
 	/>
 </div>

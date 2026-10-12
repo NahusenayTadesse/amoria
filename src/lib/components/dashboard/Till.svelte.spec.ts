@@ -108,7 +108,8 @@ describe('Till', () => {
 	it('gives no change on a non-cash payment', async () => {
 		renderTill();
 		await scan();
-		await page.getByLabelText('Payment method 1').selectOptions('telebirr');
+		await page.getByLabelText('Payment method 1').click();
+		await page.getByRole('option', { name: 'Telebirr' }).click();
 		await page.getByLabelText('Amount paid by method 1').fill('1000');
 		await expect
 			.element(page.getByText('Only cash gives change', { exact: false }))

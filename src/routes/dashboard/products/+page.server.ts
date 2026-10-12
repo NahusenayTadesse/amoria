@@ -3,7 +3,7 @@ import { contentCrud } from '@nahu/admin-kit/server/crud';
 import { WriteRefused } from '@nahu/admin-kit/server/childCrud';
 import { notDeleted } from '@nahu/admin-kit/server/softDelete';
 import { db } from '$lib/server/db';
-import { category, product, supplier } from '$lib/server/db/schema';
+import { bundle, category, product, supplier } from '$lib/server/db/schema';
 import { invalidating } from '$lib/server/cache';
 import { productAdd, productEdit } from '$lib/schemas/catalog';
 import { slugify } from '$lib/slug';
@@ -70,6 +70,13 @@ const crud = contentCrud({
 		row.slug = row.slug || slugify(row.name);
 		if (!row.slug)
 			throw new WriteRefused('slug', 'Give it a link name in Latin letters, e.g. red-rose-box');
+		// The shop's links find gifts and bundles by the same name (`?product=`, `/buy/`).
+		const [bundleClash] = await db
+			.select({ name: bundle.name })
+			.from(bundle)
+			.where(and(eq(bundle.slug, row.slug), notDeleted(bundle)));
+		if (bundleClash)
+			throw new WriteRefused('slug', `The bundle ${bundleClash.name} already uses that link name.`);
 
 		// Only the price that applies to the kind is kept. Materials are used, not sold.
 		if (row.kind === 'gift') row.dailyRate = null;

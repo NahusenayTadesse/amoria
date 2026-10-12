@@ -11,10 +11,13 @@
 	import { flyToBag } from '$lib/flyToBag';
 	import { buyLink, productLink, shareLink } from '$lib/share';
 	import { getBag } from './bag.svelte';
+	import type { BoxOffer } from '$lib/bundle';
 
 	type Props = {
 		product: {
+			kind: 'product' | 'bundle';
 			id: number;
+			key: string;
 			slug: string;
 			name: string;
 			nameAm: string | null;
@@ -23,6 +26,14 @@
 			isFeatured: boolean;
 			image: string | null;
 			imageAlt: string | null;
+			/** A bundle: what its gifts cost one by one, and the discount off that. */
+			bundle?: {
+				items: unknown[];
+				fullPrice: number;
+				discountPercent: number;
+				/** Set for a box the customer fills: + opens the builder instead. */
+				custom?: BoxOffer | null;
+			} | null;
 		};
 		/** Below this many, the card says how many are left. */
 		fewLeftAt?: number;
@@ -36,13 +47,20 @@
 
 	const bag = getBag();
 	const name = $derived(localized(product, 'name'));
-	const inBag = $derived(bag.qtyOf(product.id));
+	const inBag = $derived(bag.qtyOf(product.key));
 	const soldOut = $derived(product.stockQty <= 0);
 	const atMax = $derived(inBag >= bag.maxFor(product));
 
 	let photo = $state<HTMLElement>();
 
+	/** A box the customer builds is filled in its sheet; it cannot go in the bag empty. */
+	const isBox = $derived(Boolean(product.bundle?.custom));
+
 	function add() {
+		if (isBox) {
+			onopen();
+			return;
+		}
 		bag.add(product);
 		buzz();
 		flyToBag(photo, product.image ? publicFileUrl(product.image) : null);
@@ -156,7 +174,7 @@
 				<button
 					type="button"
 					onclick={add}
-					aria-label={m.product_add_label({ name })}
+					aria-label={isBox ? m.box_open_label({ name }) : m.product_add_label({ name })}
 					class="absolute right-2 bottom-2 grid h-11 w-11 place-items-center rounded-full bg-[var(--am-ink)] text-white shadow-lg transition-transform active:scale-90"
 				>
 					<Plus class="h-5 w-5" aria-hidden="true" />
@@ -193,8 +211,29 @@
 	</div>
 
 	<div class="flex flex-1 flex-col gap-1 pt-3">
+		{#if product.bundle}
+			<p class="text-xs font-medium tracking-wide text-muted-foreground uppercase">
+				{isBox ? m.bundle_build_own() : m.bundle_count({ count: product.bundle.items.length })}
+			</p>
+		{/if}
 		<h3 class="text-[0.95rem] leading-snug font-medium text-foreground">{name}</h3>
-		<p class="text-[0.95rem] font-semibold text-foreground tabular-nums">{birr(product.price)}</p>
+		<p class="flex flex-wrap items-baseline gap-x-2 text-[0.95rem] font-semibold text-foreground">
+			<span class="tabular-nums"
+				>{isBox ? m.bundle_from({ price: birr(product.price) }) : birr(product.price)}</span
+			>
+			{#if isBox && product.bundle && product.bundle.discountPercent > 0}
+				<span class="text-xs font-semibold text-[var(--am-ribbon)]">
+					{m.bundle_save({ percent: product.bundle.discountPercent })}
+				</span>
+			{:else if product.bundle && product.bundle.fullPrice > product.price}
+				<s class="text-xs font-normal text-muted-foreground tabular-nums"
+					>{birr(product.bundle.fullPrice)}</s
+				>
+				<span class="text-xs font-semibold text-[var(--am-ribbon)]">
+					{m.bundle_save({ percent: product.bundle.discountPercent })}
+				</span>
+			{/if}
+		</p>
 		{#if !soldOut && product.stockQty <= fewLeftAt}
 			<p class="text-xs font-medium text-[var(--am-ribbon)]">
 				{m.product_few_left({ count: product.stockQty })}

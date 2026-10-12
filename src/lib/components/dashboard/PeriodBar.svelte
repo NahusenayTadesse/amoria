@@ -1,4 +1,5 @@
 <script lang="ts">
+	import HiddenField from '@nahu/admin-kit/formComponents/HiddenField.svelte';
 	import { page } from '$app/state';
 	import { resolve } from '$app/paths';
 	import type { AppPath } from '$lib/paths';
@@ -35,7 +36,7 @@
 
 <form method="GET" class="flex flex-wrap items-end gap-3">
 	{#each others as [key, value] (key)}
-		<input type="hidden" name={key} {value} />
+		<HiddenField name={key} {value} />
 	{/each}
 	<label class="flex flex-col gap-1 text-sm">
 		<span class="text-muted-foreground">From</span>

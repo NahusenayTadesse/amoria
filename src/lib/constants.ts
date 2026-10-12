@@ -7,8 +7,12 @@
 
 export const LOCALES = ['en', 'am'] as const;
 
-/** `user.role`. What kind of account it is; *what staff may do* comes from `roleId` (§4.4). */
-export const USER_ROLES = ['customer', 'staff', 'admin'] as const;
+/**
+ * `user.role`. What kind of account it is; *what staff may do* comes from `roleId` (§4.4).
+ * `renter`: a business that lists its own rentals on the marketplace (§5.12), with its own
+ * dashboard at `/renter` and no staff permissions.
+ */
+export const USER_ROLES = ['customer', 'staff', 'admin', 'renter'] as const;
 
 /**
  * What a product is. `material` is stock the company uses rather than sells online: décor
@@ -62,6 +66,9 @@ export const ADJUSTMENT_REASONS = [
 ] as const;
 
 export const TAX_CODES = ['standard', 'zero', 'exempt'] as const;
+
+/** A bundle staff fill (`fixed`), or a container the customer fills within its rules (`custom`). */
+export const BUNDLE_TYPES = ['fixed', 'custom'] as const;
 
 export const PO_STATUSES = [
 	'draft',
@@ -171,3 +178,56 @@ export const MESSAGE_STATUSES = ['queued', 'sending', 'sent', 'failed'] as const
 
 /** What a spreadsheet import can bring in (`services/inventory/importer`). */
 export const IMPORT_KIND_NAMES = ['products', 'suppliers', 'opening'] as const;
+
+/**
+ * The rental marketplace (§5.12). A renter is a business that rents out its own things through
+ * Amoria; it is checked (TIN and trade licence) before it may list anything.
+ */
+export const RENTER_STATUSES = ['pending', 'approved', 'rejected', 'suspended'] as const;
+
+/**
+ * A renter's listing. `pending_review` waits for Amoria; `paused` is the renter taking it off the
+ * site for a while. Only `approved` listings of `approved` renters are shown.
+ */
+export const LISTING_STATUSES = [
+	'draft',
+	'pending_review',
+	'approved',
+	'rejected',
+	'paused'
+] as const;
+
+/** `fixed`: a price the customer books at ("Book now"); `quote`: the renter names a price. */
+export const LISTING_PRICING = ['fixed', 'quote'] as const;
+
+/** What a fixed price buys. */
+export const PRICE_UNITS = ['day', 'event', 'hour', 'item'] as const;
+
+/** How a marketplace order started: booked at a fixed price, or asked for a quote. */
+export const RENTER_ORDER_ORIGINS = ['buy_now', 'quote'] as const;
+
+/**
+ * A marketplace order, from the request to the hand-back:
+ *
+ *   quote:   quote_requested → quoted → (customer accepts) pending_payment …
+ *   buy now:                            pending_payment …
+ *   … → payment_review (receipt sent) → confirmed (renter saw the money) → out → completed
+ *
+ * `declined` is the renter saying no to a request, `cancelled` either side calling it off, and
+ * `expired` an unanswered quote or an unpaid booking whose hold ran out.
+ */
+export const RENTER_ORDER_STATUSES = [
+	'quote_requested',
+	'quoted',
+	'pending_payment',
+	'payment_review',
+	'confirmed',
+	'out',
+	'completed',
+	'declined',
+	'cancelled',
+	'expired'
+] as const;
+
+/** A transfer receipt sent to a renter: waiting for them, accepted, or turned down. */
+export const RENTER_PAYMENT_STATUSES = ['submitted', 'accepted', 'rejected'] as const;

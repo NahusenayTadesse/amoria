@@ -43,15 +43,15 @@
 				/>
 				<InputComp {form} {errors} name="countDate" type="date" label="Count date" />
 			</div>
-			<label class="flex items-center gap-2 text-sm">
-				<input
-					type="checkbox"
-					name="blind"
-					bind:checked={$form.blind}
-					class="size-4 accent-primary"
-				/>
-				Blind count: counters do not see the expected quantity
-			</label>
+			<InputComp
+				{form}
+				{errors}
+				name="blind"
+				type="checkboxSingle"
+				label="Blind count"
+				placeholder="Blind count: counters do not see the expected quantity"
+				hideLabel
+			/>
 			<InputComp
 				{form}
 				{errors}

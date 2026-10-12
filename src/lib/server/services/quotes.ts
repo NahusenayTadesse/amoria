@@ -21,7 +21,12 @@ export function quoteFormOptions() {
 	return cached('quote:options', { ttlMs: 60_000, tags: ['catalog'] }, async () => {
 		const [events, packages] = await Promise.all([
 			db
-				.select({ id: eventType.id, name: eventType.name, nameAm: eventType.nameAm })
+				.select({
+					id: eventType.id,
+					slug: eventType.slug,
+					name: eventType.name,
+					nameAm: eventType.nameAm
+				})
 				.from(eventType)
 				.where(notDeleted(eventType))
 				.orderBy(asc(eventType.sortOrder), asc(eventType.name)),

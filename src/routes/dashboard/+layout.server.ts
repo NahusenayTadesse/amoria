@@ -1,5 +1,5 @@
 import { redirect } from '@sveltejs/kit';
-import { isStaff } from '$lib/server/staff';
+import { isRenterUser, isStaff } from '$lib/server/staff';
 
 /**
  * The dashboard is for staff only (§4.3 fix 2). Signed out goes to the login page and comes back;
@@ -8,6 +8,7 @@ import { isStaff } from '$lib/server/staff';
 export const load = ({ locals, url }) => {
 	if (!locals.user)
 		redirect(302, `/login?redirectTo=${encodeURIComponent(url.pathname + url.search)}`);
+	if (isRenterUser(locals.user)) redirect(302, '/renter');
 	if (!isStaff(locals.user)) redirect(302, '/shop');
 
 	return {

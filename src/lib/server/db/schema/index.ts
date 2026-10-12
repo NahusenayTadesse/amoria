@@ -15,6 +15,8 @@ export * from './orders';
 export * from './rentals';
 export * from './decor';
 export * from './school';
+export * from './spaces';
+export * from './renters';
 export * from './payments';
 export * from './system';
 export * from './push';

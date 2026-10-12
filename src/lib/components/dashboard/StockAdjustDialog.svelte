@@ -65,45 +65,30 @@
 	resetOnSuccess
 >
 	{#snippet fields({ form, errors, values })}
-		{#if productId !== undefined}<input type="hidden" name="productId" value={productId} />{/if}
+		{#if productId !== undefined}<InputComp {form} {errors} name="productId" type="hidden" />{/if}
 		{#if locations.length > 1}
-			<div class="grid gap-2">
-				<label for="adjust-location" class="text-sm font-medium">Where</label>
-				<select
-					id="adjust-location"
-					name="locationId"
-					value={values.locationId}
-					onchange={(e) =>
-						form.update((v) => ({ ...v, locationId: Number(e.currentTarget.value) }))}
-					class="h-9 rounded-md border border-input bg-transparent px-3 text-sm"
-				>
-					{#each locations as l (l.value)}
-						<option value={l.value}>{l.name}</option>
-					{/each}
-				</select>
-			</div>
+			<InputComp
+				{form}
+				{errors}
+				name="locationId"
+				id="adjust-location"
+				type="select"
+				label="Where"
+				items={locations}
+			/>
 		{/if}
-		<fieldset class="flex gap-2 text-sm">
-			<legend class="sr-only">What kind of change</legend>
-			{#each [{ value: 'move', label: 'Add or remove' }, { value: 'count', label: 'Stock count' }] as option (option.value)}
-				<label
-					class={[
-						'flex-1 cursor-pointer rounded-md border p-2 text-center',
-						values.mode === option.value && 'border-primary bg-primary/5 font-semibold'
-					]}
-				>
-					<input
-						type="radio"
-						name="mode"
-						value={option.value}
-						checked={values.mode === option.value}
-						onchange={() => form.update((v) => ({ ...v, mode: option.value }))}
-						class="sr-only"
-					/>
-					{option.label}
-				</label>
-			{/each}
-		</fieldset>
+		<InputComp
+			{form}
+			{errors}
+			name="mode"
+			id="adjust-mode"
+			type="radio"
+			label="What kind of change"
+			items={[
+				{ value: 'move', name: 'Add or remove' },
+				{ value: 'count', name: 'Stock count' }
+			]}
+		/>
 
 		{#if values.mode === 'count'}
 			<InputComp
@@ -116,24 +101,15 @@
 				description="The difference from what is on record there is recorded as a correction."
 			/>
 		{:else}
-			<!--
-				Native, not the kit's SelectComp: inside this dialog the kit's option list is portalled out of
-				the modal and hidden from screen readers (the same issue as the checkout's area picker).
-			-->
-			<div class="grid gap-2">
-				<label for="adjust-reason" class="text-sm font-medium">Reason</label>
-				<select
-					id="adjust-reason"
-					name="reason"
-					value={values.reason}
-					onchange={(e) => form.update((v) => ({ ...v, reason: e.currentTarget.value }))}
-					class="h-9 rounded-md border border-input bg-transparent px-3 text-sm"
-				>
-					{#each reasonItems as item (item.value)}
-						<option value={item.value}>{item.name}</option>
-					{/each}
-				</select>
-			</div>
+			<InputComp
+				{form}
+				{errors}
+				name="reason"
+				id="adjust-reason"
+				type="select"
+				label="Reason"
+				items={reasonItems}
+			/>
 			{#if STOCK_REASON_META[values.reason as keyof typeof STOCK_REASON_META]?.hint}
 				<p class="-mt-2 text-xs text-muted-foreground">
 					{STOCK_REASON_META[values.reason as keyof typeof STOCK_REASON_META].hint}

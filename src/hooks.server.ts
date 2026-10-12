@@ -1,3 +1,4 @@
+import { error, redirect } from '@sveltejs/kit';
 import { sequence } from '@sveltejs/kit/hooks';
 import { building } from '$app/environment';
 import { auth } from '$lib/server/auth';
@@ -12,7 +13,7 @@ import { access } from '$lib/access';
 import { auditLog } from '$lib/server/db/schema';
 import { piggybackJobs } from '$lib/server/services/jobs/runner';
 import { loadGrant, seedPermissions } from '$lib/server/permissions';
-import { isStaff } from '$lib/server/staff';
+import { isRenterUser, isStaff } from '$lib/server/staff';
 
 configureKit({ db, auditLog, loginPath: '/login' });
 
@@ -95,10 +96,31 @@ const handleKit = kitHandle({
 			: { permList: [], isSuperAdmin: false }
 });
 
+/** The renters' own dashboard (§5.12), `/renter/…` (not the public `/renters/…`). */
+const RENTER_AREA = /^(?:\/am)?\/renter(?:\/|$)/;
+
+/**
+ * Closes the renter dashboard to anyone but an active renter account, here rather than in its
+ * layout: a layout's `load` does not run before a form action, so the gate must sit in front of
+ * the POSTs too (the same reason the kit gates `/dashboard` in its hook). A page view goes to the
+ * sign-in page; anything else is refused.
+ */
+const handleRenterArea: Handle = ({ event, resolve }) => {
+	if (!RENTER_AREA.test(event.url.pathname)) return resolve(event);
+	if (isRenterUser(event.locals.user)) return resolve(event);
+	const isPageView = event.request.method === 'GET' && !event.url.pathname.includes('/files/');
+	if (!event.locals.user && isPageView) {
+		redirect(303, `/login?redirectTo=${encodeURIComponent(event.url.pathname + event.url.search)}`);
+	}
+	if (isPageView && isStaff(event.locals.user)) redirect(303, '/dashboard');
+	error(event.locals.user ? 403 : 401, 'This is the renters’ dashboard.');
+};
+
 export const handle: Handle = sequence(
 	handleJobs,
 	handleParaglide,
 	handleClosedEndpoints,
 	handleBetterAuth,
+	handleRenterArea,
 	handleKit
 );

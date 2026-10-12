@@ -1,4 +1,6 @@
 <script lang="ts">
+	import HiddenField from '@nahu/admin-kit/formComponents/HiddenField.svelte';
+	import InputComp from '@nahu/admin-kit/formComponents/InputComp.svelte';
 	import CircleCheck from '@lucide/svelte/icons/circle-check';
 	import CloudOff from '@lucide/svelte/icons/cloud-off';
 	import { onMount } from 'svelte';
@@ -9,10 +11,14 @@
 	import { getLocale, localizeHref } from '$lib/paraglide/runtime';
 	import { localized } from '$lib/localized';
 	import { quoteRequestSchema } from '$lib/schemas/quote';
-	import { CONTACT_CHANNELS } from '$lib/constants';
+	import { EVENT_TYPE_UNSURE_IMAGE, eventTypeImage } from '$lib/eventTypeImages';
 	import { QUOTE_ENDPOINT, enqueue, flushQueue, requestBackgroundSync } from '$lib/offlineQueue';
 	import PageHero from '$lib/components/store/PageHero.svelte';
+	import PhotoArt from '$lib/components/store/PhotoArt.svelte';
+	import DateInput from '@nahu/admin-kit/formComponents/DateInput.svelte';
 	import ContactFields from '$lib/components/store/ContactFields.svelte';
+	import ChannelPicker from '$lib/components/store/ChannelPicker.svelte';
+	import ImageSelect from '@nahu/admin-kit/formComponents/ImageSelect.svelte';
 
 	let { data } = $props();
 
@@ -64,16 +70,16 @@
 
 	onMount(() => void flushQueue());
 
-	const channelLabel = {
-		whatsapp: m.quote_channel_whatsapp,
-		telegram: m.quote_channel_telegram,
-		sms: m.quote_channel_sms,
-		email: m.quote_channel_email,
-		phone: m.quote_channel_phone
-	};
+	/** Each event type as a picture card, then "Not sure yet" for a request that has none. */
+	const eventItems = $derived([
+		...data.events.map((event) => ({
+			value: event.id,
+			name: localized(event, 'name'),
+			image: eventTypeImage(event.slug)
+		})),
+		{ value: '', name: m.quote_event_type_unsure(), image: EVENT_TYPE_UNSURE_IMAGE }
+	]);
 
-	const field =
-		'h-12 w-full rounded-[var(--radius)] border border-input bg-card px-3 text-base text-foreground focus-visible:outline-2 focus-visible:outline-offset-2';
 	const labelClass = 'mb-1.5 block text-sm font-medium';
 </script>
 
@@ -90,7 +96,14 @@
 	accent={m.quote_h1_b()}
 	after={m.quote_h1_c()}
 	lede={m.quote_lede()}
-/>
+>
+	{#snippet art()}
+		<PhotoArt
+			main={{ src: '/images/demo/gallery-garden-reception.webp', w: 900, h: 1350, small: 480 }}
+			side={{ src: '/images/demo/gallery-gold-letters.webp', w: 900, h: 1350, small: 480 }}
+		/>
+	{/snippet}
+</PageHero>
 
 <section class="mx-auto max-w-2xl px-4 pb-24 sm:px-8">
 	{#if outcome}
@@ -126,103 +139,80 @@
 				<legend class="display mb-1 text-xl font-bold">{m.quote_details()}</legend>
 
 				<div>
-					<label for="eventTypeId" class={labelClass}>{m.quote_event_type()}</label>
-					<select id="eventTypeId" name="eventTypeId" bind:value={$form.eventTypeId} class={field}>
-						<option value="">{m.quote_event_type_any()}</option>
-						{#each data.events as event (event.id)}
-							<option value={event.id}>{localized(event, 'name')}</option>
-						{/each}
-					</select>
-				</div>
-
-				<div class="grid gap-4 sm:grid-cols-2">
-					<div>
-						<label for="eventDate" class={labelClass}>{m.quote_date()}</label>
-						<input
-							id="eventDate"
-							name="eventDate"
-							type="date"
-							bind:value={$form.eventDate}
-							aria-invalid={$errors.eventDate ? 'true' : undefined}
-							class={field}
-						/>
-						{#if $errors.eventDate}
-							<p class="mt-1 text-sm text-destructive">{$errors.eventDate}</p>
-						{/if}
-					</div>
-					<div>
-						<label for="guestCount" class={labelClass}>{m.quote_guests()}</label>
-						<input
-							id="guestCount"
-							name="guestCount"
-							type="number"
-							inputmode="numeric"
-							min="1"
-							bind:value={$form.guestCount}
-							class={field}
-						/>
-					</div>
-				</div>
-
-				<div>
-					<label for="venue" class={labelClass}>{m.quote_venue()}</label>
-					<input
-						id="venue"
-						name="venue"
-						type="text"
-						placeholder={m.quote_venue_hint()}
-						bind:value={$form.venue}
-						class={field}
+					<p id="eventTypeId-label" class={labelClass}>{m.quote_event_type()}</p>
+					<ImageSelect
+						name="eventTypeId"
+						items={eventItems}
+						bind:value={$form.eventTypeId}
+						labelledBy="eventTypeId-label"
 					/>
 				</div>
 
 				<div class="grid gap-4 sm:grid-cols-2">
 					<div>
-						<label for="theme" class={labelClass}>{m.quote_theme()}</label>
-						<input
-							id="theme"
-							name="theme"
-							type="text"
-							placeholder={m.quote_theme_hint()}
-							bind:value={$form.theme}
-							class={field}
+						<label for="eventDate" class={labelClass}>{m.quote_date()}</label>
+						<DateInput
+							name="eventDate"
+							id="eventDate"
+							bind:value={$form.eventDate}
+							oldDays={false}
+							year
 						/>
+						{#if $errors.eventDate}
+							<p class="mt-1 text-sm text-destructive">{$errors.eventDate}</p>
+						{/if}
 					</div>
-					<div>
-						<label for="budget" class={labelClass}>{m.quote_budget()}</label>
-						<input
-							id="budget"
-							name="budget"
-							type="number"
-							inputmode="numeric"
-							min="0"
-							bind:value={$form.budget}
-							class={field}
-						/>
-					</div>
+					<InputComp
+						{form}
+						{errors}
+						name="guestCount"
+						type="number"
+						min={1}
+						label={m.quote_guests()}
+					/>
+				</div>
+
+				<InputComp
+					{form}
+					{errors}
+					name="venue"
+					label={m.quote_venue()}
+					placeholder={m.quote_venue_hint()}
+				/>
+
+				<div class="grid gap-4 sm:grid-cols-2">
+					<InputComp
+						{form}
+						{errors}
+						name="theme"
+						label={m.quote_theme()}
+						placeholder={m.quote_theme_hint()}
+					/>
+					<InputComp {form} {errors} name="budget" type="number" min={0} label={m.quote_budget()} />
 				</div>
 
 				{#if data.packages.length}
-					<div>
-						<label for="packageId" class={labelClass}>{m.quote_package()}</label>
-						<select id="packageId" name="packageId" bind:value={$form.packageId} class={field}>
-							<option value="">{m.quote_package_none()}</option>
-							{#each data.packages as pack (pack.id)}
-								<option value={pack.id}>{localized(pack, 'name')}</option>
-							{/each}
-						</select>
-					</div>
+					<InputComp
+						{form}
+						{errors}
+						name="packageId"
+						type="select"
+						label={m.quote_package()}
+						items={[
+							{ value: '', name: m.quote_package_none() },
+							...data.packages.map((pack) => ({ value: pack.id, name: localized(pack, 'name') }))
+						]}
+					/>
 				{/if}
 
-				<div>
-					<label for="message" class={labelClass}>{m.quote_message()}</label>
-					<textarea
-						id="message"
-						name="message"
-						rows="4"
-						bind:value={$form.message}
-						class="{field} h-auto py-3"></textarea>
-				</div>
+				<InputComp
+					{form}
+					{errors}
+					name="message"
+					type="textarea"
+					rows={4}
+					label={m.quote_message()}
+				/>
 			</fieldset>
 
 			<fieldset class="flex flex-col gap-4">
@@ -230,21 +220,16 @@
 				<ContactFields {form} {errors} />
 
 				<div>
-					<label for="preferredChannel" class={labelClass}>{m.quote_channel()}</label>
-					<select
-						id="preferredChannel"
+					<p id="preferredChannel-label" class={labelClass}>{m.quote_channel()}</p>
+					<ChannelPicker
 						name="preferredChannel"
 						bind:value={$form.preferredChannel}
-						class={field}
-					>
-						{#each CONTACT_CHANNELS as channel (channel)}
-							<option value={channel}>{channelLabel[channel]()}</option>
-						{/each}
-					</select>
+						labelledBy="preferredChannel-label"
+					/>
 				</div>
 			</fieldset>
 
-			<input type="hidden" name="clientRef" value={clientRef} />
+			<HiddenField name="clientRef" value={clientRef} />
 
 			<button
 				type="submit"

@@ -41,6 +41,19 @@ FROM (
 ) AS p
 JOIN category c ON c.slug = p.cat;
 
+-- Stock lives in the ledger's balances (§5.11); `product.stock_qty` is only their total, so a seeded
+-- count needs a balance behind it, or checkout finds nothing to sell ("sold out"). A freshly emptied
+-- database (the test one) has no locations yet, so the shop floor is made here when missing.
+INSERT INTO location (name, kind, sort_order)
+SELECT 'Shop floor', 'shop', 0 FROM DUAL
+WHERE NOT EXISTS (SELECT 1 FROM location WHERE kind = 'shop');
+
+INSERT INTO stock_balance (location_id, product_id, lot_key, quantity)
+SELECT (SELECT id FROM location WHERE kind = 'shop' ORDER BY sort_order, id LIMIT 1), p.id, 0, p.stock_qty
+FROM product p
+WHERE p.stock_qty > 0
+	AND NOT EXISTS (SELECT 1 FROM stock_balance b WHERE b.product_id = p.id);
+
 INSERT INTO bank_account (bank_name, account_name, account_number, sort_order)
 SELECT * FROM (
 	SELECT 'Commercial Bank of Ethiopia' AS bank_name, 'Amoria Gifts (demo)' AS account_name, '1000123456789' AS account_number, 1 AS sort_order
@@ -250,3 +263,127 @@ FROM (
 ) AS i
 JOIN course c ON c.slug = i.slug
 WHERE NOT EXISTS (SELECT 1 FROM course_image x WHERE x.file_name = i.file_name);
+
+-- ---------------------------------------------------------------------------------------------
+-- Bundles (§5.2): two containers with rules, two boxes customers fill, and ready-made sets.
+-- Demo prices and photos only. Keyed on slugs and names, so re-running adds nothing twice.
+-- ---------------------------------------------------------------------------------------------
+
+INSERT IGNORE INTO category (kind, slug, name, name_am, sort_order) VALUES
+	('gift', 'baskets-and-crates', 'Baskets and crates', 'ቅርጫቶችና ሳጥኖች', 5);
+
+-- The containers: sold with the bundles that come in them, not on the shop by themselves.
+INSERT IGNORE INTO product
+	(kind, category_id, slug, name, name_am, description, price, stock_qty, is_featured, published_at, sort_order)
+SELECT 'gift', c.id, p.slug, p.name, p.name_am, p.description, p.price, p.stock, 0, NULL, p.sort
+FROM (
+	SELECT 'wicker-gift-basket' AS slug, 'Wicker gift basket' AS name, 'የስጦታ ቅርጫት' AS name_am, 'A hand-woven basket, lined and ribboned.' AS description, 350.00 AS price, 12 AS stock, 1 AS sort
+	UNION ALL SELECT 'wooden-gift-crate', 'Wooden gift crate', 'የእንጨት ስጦታ ሳጥን', 'A pine crate with a lid, filled with tissue.', 500.00, 8, 2
+) AS p
+JOIN category c ON c.slug = 'baskets-and-crates';
+
+INSERT INTO stock_balance (location_id, product_id, lot_key, quantity)
+SELECT (SELECT id FROM location WHERE kind = 'shop' ORDER BY sort_order, id LIMIT 1), p.id, 0, p.stock_qty
+FROM product p
+WHERE p.slug IN ('wicker-gift-basket', 'wooden-gift-crate')
+	AND NOT EXISTS (SELECT 1 FROM stock_balance b WHERE b.product_id = p.id);
+
+INSERT INTO product_image (product_id, file_name, alt, sort_order)
+SELECT p.id, i.file_name, i.alt, 0
+FROM (
+	SELECT 'wicker-gift-basket' AS slug, 'demo-container-basket.webp' AS file_name, 'A round wicker basket' AS alt
+	UNION ALL SELECT 'wooden-gift-crate', 'demo-container-crate.webp', 'A wooden crate filled with gifts'
+) AS i
+JOIN product p ON p.slug = i.slug
+WHERE NOT EXISTS (SELECT 1 FROM product_image x WHERE x.product_id = p.id AND x.file_name = i.file_name);
+
+-- What fits in each (a category's rule also covers its sub-categories).
+INSERT INTO container_rule (container_id, category_id, min_qty, max_qty, sort_order)
+SELECT p.id, c.id, r.min_qty, r.max_qty, r.sort
+FROM (
+	SELECT 'wicker-gift-basket' AS container, 'flowers' AS cat, 1 AS min_qty, 3 AS max_qty, 1 AS sort
+	UNION ALL SELECT 'wicker-gift-basket', 'gift-boxes', 0, 2, 2
+	UNION ALL SELECT 'wicker-gift-basket', 'keepsakes', 0, 2, 3
+	UNION ALL SELECT 'wicker-gift-basket', 'balloons', 0, 3, 4
+	UNION ALL SELECT 'wooden-gift-crate', 'gift-boxes', 1, 4, 1
+	UNION ALL SELECT 'wooden-gift-crate', 'keepsakes', 0, 3, 2
+	UNION ALL SELECT 'wooden-gift-crate', 'flowers', 0, 2, 3
+) AS r
+JOIN product p ON p.slug = r.container
+JOIN category c ON c.slug = r.cat
+WHERE NOT EXISTS (
+	SELECT 1 FROM container_rule x
+	WHERE x.container_id = p.id AND x.category_id = c.id AND x.deleted_at IS NULL
+);
+
+INSERT IGNORE INTO bundle
+	(slug, name, name_am, description, type, container_id, discount_percent, category_id, is_featured, published_at, sort_order)
+SELECT b.slug, b.name, b.name_am, b.description, b.type, p.id, b.discount, c.id, b.featured, NOW() - INTERVAL 1 DAY, b.sort
+FROM (
+	SELECT 'build-your-basket' AS slug, 'Build your basket' AS name, 'ቅርጫትዎን ያዘጋጁ' AS name_am, 'Choose one to three bunches of flowers, then add treats and keepsakes. We wrap it the same day.' AS description, 'custom' AS type, 'wicker-gift-basket' AS container, 10.00 AS discount, NULL AS cat, 1 AS featured, 1 AS sort
+	UNION ALL SELECT 'fill-a-gift-crate', 'Fill a gift crate', 'የስጦታ ሳጥን ይሙሉ', 'A wooden crate for up to four gift boxes and three keepsakes, with a bunch of flowers on top if you like.', 'custom', 'wooden-gift-crate', 8.00, NULL, 0, 2
+	UNION ALL SELECT 'valentine-box', 'Valentine box', 'የቫለንታይን ሳጥን', 'Red roses, chocolates and a keepsake box for letters.', 'fixed', NULL, 10.00, 'flowers', 1, 3
+	UNION ALL SELECT 'chocolate-lovers-basket', 'Chocolate lover''s basket', 'የቸኮሌት አፍቃሪ ቅርጫት', 'Two boxes of chocolates and a wrapped surprise in a wicker basket, with a garden bouquet.', 'fixed', 'wicker-gift-basket', 12.00, 'gift-boxes', 0, 4
+	UNION ALL SELECT 'birthday-party-set', 'Birthday party set', 'የልደት ድግስ ስብስብ', 'A birthday surprise box, a balloon bundle and two gold number balloons.', 'fixed', NULL, 15.00, 'balloons', 0, 5
+	UNION ALL SELECT 'gourmet-treat-crate', 'Gourmet treat crate', 'የጣፋጭ ምግቦች ሳጥን', 'Chocolates, a wrapped surprise and a keepsake box in a wooden crate.', 'fixed', 'wooden-gift-crate', 10.00, 'gift-boxes', 0, 6
+	UNION ALL SELECT 'garden-party-basket', 'Garden party basket', 'የአትክልት ድግስ ቅርጫት', 'Garden flowers, a balloon bundle and a wrapped surprise in a wicker basket.', 'fixed', 'wicker-gift-basket', 10.00, 'flowers', 0, 7
+	UNION ALL SELECT 'keepsake-memory-crate', 'Keepsake memory crate', 'የማስታወሻ ሳጥን ስብስብ', 'Two keepsake boxes, a birthday surprise box and garden flowers in a wooden crate.', 'fixed', 'wooden-gift-crate', 10.00, 'keepsakes', 0, 8
+	UNION ALL SELECT 'celebration-balloon-set', 'Celebration balloon set', 'የክብረ በዓል ፊኛ ስብስብ', 'Two balloon bundles and two gold number balloons, filled on the day.', 'fixed', NULL, 12.00, 'balloons', 0, 9
+	UNION ALL SELECT 'thank-you-basket', 'Thank-you basket', 'የምስጋና ቅርጫት', 'Chocolates, garden flowers and a keepsake box in a wicker basket.', 'fixed', 'wicker-gift-basket', 10.00, 'gift-boxes', 0, 10
+) AS b
+LEFT JOIN product p ON p.slug = b.container
+LEFT JOIN category c ON c.slug = b.cat;
+
+INSERT INTO bundle_item (bundle_id, product_id, qty, sort_order)
+SELECT b.id, p.id, i.qty, i.sort
+FROM (
+	SELECT 'valentine-box' AS bundle, 'red-rose-bouquet' AS product, 1 AS qty, 1 AS sort
+	UNION ALL SELECT 'valentine-box', 'chocolate-gift-box', 1, 2
+	UNION ALL SELECT 'valentine-box', 'keepsake-box', 1, 3
+	UNION ALL SELECT 'chocolate-lovers-basket', 'chocolate-gift-box', 2, 1
+	UNION ALL SELECT 'chocolate-lovers-basket', 'wrapped-surprise', 1, 2
+	UNION ALL SELECT 'chocolate-lovers-basket', 'garden-bouquet', 1, 3
+	UNION ALL SELECT 'birthday-party-set', 'birthday-surprise-box', 1, 1
+	UNION ALL SELECT 'birthday-party-set', 'balloon-bundle', 1, 2
+	UNION ALL SELECT 'birthday-party-set', 'number-balloon', 2, 3
+	UNION ALL SELECT 'gourmet-treat-crate', 'chocolate-gift-box', 1, 1
+	UNION ALL SELECT 'gourmet-treat-crate', 'wrapped-surprise', 1, 2
+	UNION ALL SELECT 'gourmet-treat-crate', 'keepsake-box', 1, 3
+	UNION ALL SELECT 'garden-party-basket', 'garden-bouquet', 1, 1
+	UNION ALL SELECT 'garden-party-basket', 'balloon-bundle', 1, 2
+	UNION ALL SELECT 'garden-party-basket', 'wrapped-surprise', 1, 3
+	UNION ALL SELECT 'keepsake-memory-crate', 'keepsake-box', 2, 1
+	UNION ALL SELECT 'keepsake-memory-crate', 'birthday-surprise-box', 1, 2
+	UNION ALL SELECT 'keepsake-memory-crate', 'garden-bouquet', 1, 3
+	UNION ALL SELECT 'celebration-balloon-set', 'balloon-bundle', 2, 1
+	UNION ALL SELECT 'celebration-balloon-set', 'number-balloon', 2, 2
+	UNION ALL SELECT 'thank-you-basket', 'chocolate-gift-box', 1, 1
+	UNION ALL SELECT 'thank-you-basket', 'garden-bouquet', 1, 2
+	UNION ALL SELECT 'thank-you-basket', 'keepsake-box', 1, 3
+) AS i
+JOIN bundle b ON b.slug = i.bundle
+JOIN product p ON p.slug = i.product
+WHERE NOT EXISTS (
+	SELECT 1 FROM bundle_item x WHERE x.bundle_id = b.id AND x.product_id = p.id AND x.deleted_at IS NULL
+);
+
+INSERT INTO bundle_image (bundle_id, file_name, alt, sort_order)
+SELECT b.id, i.file_name, i.alt, i.sort
+FROM (
+	SELECT 'build-your-basket' AS bundle, 'demo-bundle-build-basket.webp' AS file_name, 'Pink roses in a wicker basket' AS alt, 0 AS sort
+	UNION ALL SELECT 'build-your-basket', 'demo-bundle-build-basket-2.webp', 'A ribboned basket with a candle and a book', 1
+	UNION ALL SELECT 'fill-a-gift-crate', 'demo-bundle-fill-crate.webp', 'A wooden crate filled with flowers and treats', 0
+	UNION ALL SELECT 'valentine-box', 'demo-bundle-valentine.webp', 'Roses beside an open gift box', 0
+	UNION ALL SELECT 'valentine-box', 'demo-bundle-valentine-2.webp', 'Flowers arranged in an open box', 1
+	UNION ALL SELECT 'chocolate-lovers-basket', 'demo-bundle-chocolate-basket.webp', 'A basket of chocolates with a card and a candle', 0
+	UNION ALL SELECT 'chocolate-lovers-basket', 'demo-bundle-chocolate-basket-2.webp', 'A bag of wrapped chocolates by the fire', 1
+	UNION ALL SELECT 'birthday-party-set', 'demo-bundle-birthday.webp', 'Gift boxes tied with ribbon', 0
+	UNION ALL SELECT 'birthday-party-set', 'demo-bundle-birthday-2.webp', 'A bundle of party balloons', 1
+	UNION ALL SELECT 'gourmet-treat-crate', 'demo-bundle-gourmet.webp', 'A gift box of treats, fruit and flowers', 0
+	UNION ALL SELECT 'garden-party-basket', 'demo-bundle-garden-party.webp', 'A white basket of sweets and flowers', 0
+	UNION ALL SELECT 'keepsake-memory-crate', 'demo-bundle-keepsake-crate.webp', 'Petals in a wooden box', 0
+	UNION ALL SELECT 'celebration-balloon-set', 'demo-bundle-balloons.webp', 'Gold number balloons and a balloon bundle', 0
+	UNION ALL SELECT 'thank-you-basket', 'demo-bundle-thank-you.webp', 'A gift basket of treats', 0
+) AS i
+JOIN bundle b ON b.slug = i.bundle
+WHERE NOT EXISTS (SELECT 1 FROM bundle_image x WHERE x.bundle_id = b.id AND x.file_name = i.file_name);

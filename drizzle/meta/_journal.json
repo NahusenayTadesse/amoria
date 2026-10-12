@@ -50,6 +50,34 @@
       "when": 1791233591618,
       "tag": "0006_quote_request_client_ref",
       "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "5",
+      "when": 1791727687701,
+      "tag": "0007_rental_spaces",
+      "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "5",
+      "when": 1791731857866,
+      "tag": "0008_renter_marketplace",
+      "breakpoints": true
+    },
+    {
+      "idx": 9,
+      "version": "5",
+      "when": 1791745061993,
+      "tag": "0009_bundles",
+      "breakpoints": true
+    },
+    {
+      "idx": 10,
+      "version": "5",
+      "when": 1791749019683,
+      "tag": "0010_build_your_own_box",
+      "breakpoints": true
     }
   ]
 }

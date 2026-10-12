@@ -1,4 +1,6 @@
 <script lang="ts">
+	import SelectComp from '@nahu/admin-kit/formComponents/SelectComp.svelte';
+	import HiddenField from '@nahu/admin-kit/formComponents/HiddenField.svelte';
 	import { resolve } from '$app/paths';
 	import { enhance } from '$app/forms';
 	import Notice from '@nahu/admin-kit/components/Notice.svelte';
@@ -97,17 +99,20 @@
 					</table>
 				</div>
 				<div class="flex flex-wrap items-end gap-4">
-					<label class="flex flex-col gap-1 text-sm">
-						<span class="text-muted-foreground">Refund paid by</span>
-						<select bind:value={method} class="h-9 rounded-md border bg-background px-2">
-							{#each data.methods as m (m.value)}
-								<option value={m.value}>{m.name}</option>
-							{/each}
-						</select>
-					</label>
+					<div class="flex w-56 flex-col gap-1 text-sm">
+						<label for="refund-method" class="text-muted-foreground">Refund paid by</label>
+						<!-- Not posted itself: the method goes in the refund's JSON payload. -->
+						<SelectComp
+							id="refund-method"
+							name="refundMethod"
+							label="Refund paid by"
+							bind:value={method}
+							items={data.methods}
+						/>
+					</div>
 					<p class="text-lg font-semibold tabular-nums">Refund {formatETB(refund)}</p>
 				</div>
-				<input type="hidden" name="payload" value={payload} />
+				<HiddenField name="payload" value={payload} />
 				<div>
 					<Button type="submit" disabled={!data.hasShift || refund <= 0}>Give the refund</Button>
 				</div>

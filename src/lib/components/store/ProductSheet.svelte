@@ -1,6 +1,7 @@
 <!--
 	A gift, opened: a swipeable row of its photos, the description, and the add-to-bag stepper with
-	"Buy now". A bottom sheet on phones, a side panel on wider screens. Open state is the page's
+	"Buy now". A build-your-own box shows its builder instead, and goes in the bag once it is full
+	enough. A bottom sheet on phones, a side panel on wider screens. Open state is the page's
 	shallow-routing state, so the Back button closes it.
 -->
 <script lang="ts">
@@ -16,9 +17,14 @@
 	import { flyToBag } from '$lib/flyToBag';
 	import { productLink, shareLink } from '$lib/share';
 	import { getBag } from './bag.svelte';
+	import { BoxDraft } from './boxDraft.svelte';
+	import BoxBuilder from './BoxBuilder.svelte';
+	import type { BoxOffer } from '$lib/bundle';
 
 	type Product = {
+		kind: 'product' | 'bundle';
 		id: number;
+		key: string;
 		slug: string;
 		name: string;
 		nameAm: string | null;
@@ -27,6 +33,12 @@
 		price: number;
 		stockQty: number;
 		gallery: { fileName: string; alt: string | null }[];
+		bundle: {
+			items: { name: string; nameAm: string | null; qty: number }[];
+			fullPrice: number;
+			discountPercent: number;
+			custom: BoxOffer | null;
+		} | null;
 	};
 	type Props = { product: Product | undefined; onclose: () => void; onbuy: () => void };
 	let { product, onclose, onbuy }: Props = $props();
@@ -36,11 +48,51 @@
 
 	const name = $derived(product ? localized(product, 'name') : '');
 	const description = $derived(product ? localized(product, 'description') : '');
-	const inBag = $derived(product ? bag.qtyOf(product.id) : 0);
+	const inBag = $derived(product ? bag.qtyOf(product.key) : 0);
 	const soldOut = $derived(!product || product.stockQty <= 0);
 	const atMax = $derived(product ? inBag >= bag.maxFor(product) : true);
 
 	let addButton = $state<HTMLElement>();
+
+	/** A build-your-own box: filled here, then added as its own line. New for each product opened. */
+	const draft = $derived.by(() => {
+		const bundle = product?.bundle;
+		const offer = bundle?.custom;
+		return bundle && offer
+			? new BoxDraft(
+					() => offer,
+					() => bundle.discountPercent
+				)
+			: null;
+	});
+
+	/** What the box still needs before it can go in the bag. */
+	const boxHint = $derived.by(() => {
+		if (!draft || draft.ready) return '';
+		const short = draft.problems.find((p) => p.kind === 'too_few');
+		if (short?.kind === 'too_few') {
+			return m.box_need({
+				count: short.rule.minQty - short.count,
+				group: localized(short.rule, 'name')
+			});
+		}
+		return m.box_pick_one();
+	});
+
+	function addBox() {
+		if (!product || !draft?.ready) return;
+		bag.addBox(product, draft.picks);
+		buzz();
+		flyToBag(addButton, product.gallery[0] ? publicFileUrl(product.gallery[0].fileName) : null);
+		draft.reset();
+	}
+
+	function buyBox() {
+		if (!product || !draft?.ready) return;
+		bag.addBox(product, draft.picks);
+		draft.reset();
+		onbuy();
+	}
 
 	function add() {
 		if (!product) return;
@@ -119,10 +171,40 @@
 							<Share2 class="h-4 w-4" aria-hidden="true" />
 						</button>
 					</div>
-					<p class="mt-1 text-xl font-semibold tabular-nums">{birr(product.price)}</p>
+					{#if draft}
+						<p class="mt-1 flex flex-wrap items-baseline gap-x-3 text-xl font-semibold">
+							<span class="tabular-nums" aria-live="polite"
+								>{draft.count
+									? birr(draft.price)
+									: m.bundle_from({ price: birr(product.price) })}</span
+							>
+							{#if draft.count && draft.fullPrice > draft.price}
+								<s class="text-sm font-normal text-muted-foreground tabular-nums"
+									>{birr(draft.fullPrice)}</s
+								>
+							{/if}
+							{#if product.bundle && product.bundle.discountPercent > 0}
+								<span class="text-sm font-semibold text-[var(--am-ribbon)]">
+									{m.bundle_save({ percent: product.bundle.discountPercent })}
+								</span>
+							{/if}
+						</p>
+					{:else}
+						<p class="mt-1 flex flex-wrap items-baseline gap-x-3 text-xl font-semibold">
+							<span class="tabular-nums">{birr(product.price)}</span>
+							{#if product.bundle && product.bundle.fullPrice > product.price}
+								<s class="text-sm font-normal text-muted-foreground tabular-nums"
+									>{birr(product.bundle.fullPrice)}</s
+								>
+								<span class="text-sm font-semibold text-[var(--am-ribbon)]">
+									{m.bundle_save({ percent: product.bundle.discountPercent })}
+								</span>
+							{/if}
+						</p>
+					{/if}
 					{#if soldOut}
 						<p class="mt-2 text-sm font-medium text-muted-foreground">{m.product_sold_out()}</p>
-					{:else if product.stockQty <= 3}
+					{:else if product.stockQty <= 3 && !draft}
 						<p class="mt-2 text-sm font-medium text-[var(--am-ribbon)]">
 							{m.product_few_left({ count: product.stockQty })}
 						</p>
@@ -132,10 +214,55 @@
 							{description}
 						</p>
 					{/if}
+					{#if draft}
+						{#if !soldOut}
+							<div class="mt-6"><BoxBuilder {draft} /></div>
+						{/if}
+					{:else if product.bundle}
+						<section class="mt-5 rounded-[var(--radius)] bg-secondary p-4">
+							<h3 class="text-sm font-semibold">{m.bundle_inside()}</h3>
+							<ul class="mt-2 flex flex-col gap-1.5 text-[0.95rem]">
+								{#each product.bundle.items as item, index (index)}
+									<li class="flex justify-between gap-3">
+										<span>{localized(item, 'name')}</span>
+										<span class="text-muted-foreground tabular-nums">×{item.qty}</span>
+									</li>
+								{/each}
+							</ul>
+						</section>
+					{/if}
 				</div>
 			</div>
 
-			{#if !soldOut}
+			{#if !soldOut && draft}
+				<div
+					bind:this={addButton}
+					class="border-t border-border bg-background px-5 pt-3 pb-[max(0.75rem,env(safe-area-inset-bottom))]"
+				>
+					{#if boxHint}
+						<p class="mb-2 text-sm text-muted-foreground" aria-live="polite">{boxHint}</p>
+					{/if}
+					<div class="flex items-center gap-3">
+						<button
+							type="button"
+							onclick={addBox}
+							disabled={!draft.ready}
+							class="h-12 flex-1 rounded-full border border-foreground/40 px-4 text-sm font-semibold active:bg-secondary disabled:opacity-40"
+						>
+							{m.box_add()}
+						</button>
+						<button
+							type="button"
+							onclick={buyBox}
+							disabled={!draft.ready}
+							aria-label={m.product_buy_now_label({ name })}
+							class="h-12 flex-1 rounded-full bg-foreground px-4 text-sm font-semibold text-background active:opacity-90 disabled:opacity-40"
+						>
+							{m.product_buy_now()}
+						</button>
+					</div>
+				</div>
+			{:else if !soldOut}
 				<div
 					bind:this={addButton}
 					class="flex items-center gap-3 border-t border-border bg-background px-5 pt-3 pb-[max(0.75rem,env(safe-area-inset-bottom))]"

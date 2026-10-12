@@ -1,26 +1,45 @@
 <script lang="ts">
 	import { resolve } from '$app/paths';
 	import type { AppPath } from '$lib/paths';
-	import { enhance } from '$app/forms';
-	import { toast } from 'svelte-sonner';
-	import Trash from '@lucide/svelte/icons/trash-2';
 	import * as Card from '@nahu/admin-kit/components/ui/card/index.js';
-	import { Button } from '@nahu/admin-kit/components/ui/button/index.js';
 	import Statuses from '@nahu/admin-kit/components/Table/statuses.svelte';
 	import StatCard from '@nahu/admin-kit/components/reports/StatCard.svelte';
-	import FormDialog from '@nahu/admin-kit/formComponents/FormDialog.svelte';
-	import InputComp from '@nahu/admin-kit/formComponents/InputComp.svelte';
-	import FileUpload from '@nahu/admin-kit/formComponents/FileUpload.svelte';
 	import { formatETB } from '@nahu/admin-kit/global';
 	import { ethiopianDateTime } from '@nahu/admin-kit/tableCells';
-	import { publicFileUrl } from '@nahu/admin-kit/files';
+	import PhotoManager from '$lib/components/dashboard/PhotoManager.svelte';
+	import PageSection from '@nahu/admin-kit/components/PageSection.svelte';
+	import LookupSection from '@nahu/admin-kit/components/lookup/LookupSection.svelte';
+	import type { LookupField } from '@nahu/admin-kit/components/lookup/types';
+	import { containerRuleAdd, containerRuleEdit } from '$lib/schemas/catalog';
 	import StockAdjustDialog from '$lib/components/dashboard/StockAdjustDialog.svelte';
 	import { PRODUCT_KIND_LABELS, STOCK_REASON_META, STOCK_REF_LINKS, ethDay } from '$lib/stock';
-	import { imageAdd } from '$lib/schemas/catalog';
 
 	let { data } = $props();
 
 	const p = $derived(data.product);
+
+	const ruleFields: LookupField[] = [
+		{
+			name: 'categoryId',
+			label: 'A category',
+			type: 'reference',
+			options: 'categoryId',
+			display: 'category',
+			required: false,
+			placeholder: 'e.g. Flowers'
+		},
+		{
+			name: 'productId',
+			label: 'Or one gift',
+			type: 'reference',
+			options: 'productId',
+			display: 'gift',
+			picker: 'combo',
+			required: false
+		},
+		{ name: 'maxQty', label: 'Holds at most', type: 'number' },
+		{ name: 'minQty', label: 'Needs at least', type: 'number', required: false }
+	];
 	const low = $derived(p.stockQty <= data.lowStockAt);
 
 	const stats = $derived([
@@ -58,20 +77,6 @@
 			hint: p.lowStockThreshold === null ? 'Shop default' : 'Set on this product'
 		}
 	]);
-
-	const onDelete = () => {
-		return async ({
-			result,
-			update
-		}: {
-			result: { type: string };
-			update: () => Promise<void>;
-		}) => {
-			if (result.type === 'success') toast.success('Photo removed');
-			else toast.error('Only an admin can remove photos');
-			await update();
-		};
-	};
 </script>
 
 <svelte:head>
@@ -168,77 +173,41 @@
 		</Card.Content>
 	</Card.Root>
 
-	<Card.Root>
-		<Card.Header class="flex flex-row items-center justify-between">
-			<Card.Title>Photos</Card.Title>
-			<FormDialog
-				title="Add a photo"
-				description="Compressed in your browser before it uploads. The first photo is the one on the shop."
-				action="?/addImage"
-				data={data.images.addForm}
-				schema={imageAdd}
-				triggerLabel="Add photo"
-				submitLabel="Upload"
-				multipart
-				resetOnSuccess
-			>
-				{#snippet fields({ form, errors })}
-					<FileUpload {form} name="fileName" placeholder="JPG, PNG or WebP" />
-					<InputComp {form} {errors} name="alt" label="What it shows (for screen readers)" />
-					<InputComp {form} {errors} name="altAm" label="What it shows, in Amharic" />
-					<InputComp {form} {errors} name="sortOrder" type="number" label="Order (lower first)" />
-				{/snippet}
-			</FormDialog>
-		</Card.Header>
-		<Card.Content>
-			{#if data.images.rows.length === 0}
-				<p class="text-sm text-muted-foreground">
-					No photos yet. The shop shows a wrapped-gift placeholder until you add one.
+	{#if data.container}
+		<PageSection
+			title="What fits in it"
+			hint="Give this gift rules to use it as a box, basket or wrap for bundles. A gift goes in only if a rule names it or its category, and it counts towards every rule that does: “Toys: at most 3” and “Teddy bear: at most 1” both apply to a teddy."
+		>
+			<LookupSection
+				config={{ entity: 'Rule', plural: 'Rules', fields: ruleFields }}
+				rows={data.container.rows}
+				addForm={data.container.addForm}
+				editForm={data.container.editForm}
+				canDelete
+				options={data.container.options}
+				actions={{ add: '?/addRule', edit: '?/editRule', delete: '?/deleteRule' }}
+				schemas={{ add: containerRuleAdd, edit: containerRuleEdit }}
+			/>
+			{#if data.container.usedBy.length}
+				<p class="mt-3 text-sm text-muted-foreground">
+					Used by
+					{#each data.container.usedBy as b, i (b.id)}
+						{i ? ', ' : ''}<a
+							class="text-primary hover:underline"
+							href={resolve('/dashboard/bundles/[id]', { id: String(b.id) })}>{b.name}</a
+						>{b.type === 'custom' ? ' (built by customers)' : ''}
+					{/each}.
 				</p>
-			{:else}
-				<ul class="grid grid-cols-2 gap-3 sm:grid-cols-4 lg:grid-cols-6">
-					{#each data.images.rows as image (image.id)}
-						{@const img = image as typeof image & {
-							fileName: string;
-							alt: string | null;
-							sortOrder: number;
-						}}
-						<li class="group relative overflow-hidden rounded-md border">
-							<img
-								src={publicFileUrl(img.fileName)}
-								alt={img.alt ?? ''}
-								class="aspect-square w-full object-cover"
-								loading="lazy"
-							/>
-							<p class="truncate px-2 py-1 text-xs text-muted-foreground">
-								#{img.sortOrder}
-								{img.alt ?? ''}
-							</p>
-							{#if data.isSuperAdmin}
-								<form
-									method="POST"
-									action="?/deleteImage"
-									use:enhance={onDelete}
-									class="absolute top-1 right-1"
-								>
-									<input type="hidden" name="id" value={img.id} />
-									<Button
-										type="submit"
-										size="icon"
-										variant="destructive"
-										class="size-8"
-										aria-label="Remove this photo"
-									>
-										<Trash class="size-4" />
-									</Button>
-								</form>
-							{/if}
-						</li>
-					{/each}
-				</ul>
 			{/if}
-		</Card.Content>
-	</Card.Root>
+		</PageSection>
+	{/if}
+
+	<PhotoManager
+		photos={data.images}
+		canRemove={data.isSuperAdmin}
+		mainUse="the one on the product's card and at the top of its page in the shop"
+		emptyText="The shop shows a wrapped-gift placeholder until you add one."
+	/>
 
 	<Card.Root>
 		<Card.Header>

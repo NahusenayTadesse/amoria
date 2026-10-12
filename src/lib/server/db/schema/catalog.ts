@@ -10,8 +10,8 @@ import {
 	varchar,
 	type AnyMySqlColumn
 } from 'drizzle-orm/mysql-core';
-import { PRODUCT_KINDS, TAX_CODES } from '../../../constants';
-import { birr, unitCost } from './columns';
+import { BUNDLE_TYPES, PRODUCT_KINDS, TAX_CODES } from '../../../constants';
+import { birr, percent, unitCost } from './columns';
 import { supplier } from './suppliers';
 import { deletionFields, lesserFields, secureFields } from './secureFields';
 
@@ -110,4 +110,103 @@ export const productImage = mysqlTable(
 		...deletionFields
 	},
 	(table) => [index('product_image_owner_idx').on(table.productId, table.sortOrder)]
+);
+
+/**
+ * A bundle: several gifts sold as one item at a discount (§5.2). It holds no stock of its own:
+ * how many can be sold is read off its contents, and a sale takes each one from the ledger.
+ *
+ * Its price is never stored: it is the contents' current prices, less `discountPercent`, worked
+ * out by `$lib/bundle` on every read and again at checkout, so a price change on a gift moves
+ * every bundle it is in.
+ */
+export const bundle = mysqlTable(
+	'bundle',
+	{
+		id: int('id').autoincrement().primaryKey(),
+		/** Shares the shop's links with products (`?product=`, `/buy/`), so unique across both. */
+		slug: varchar('slug', { length: 160 }).notNull().unique(),
+		name: varchar('name', { length: 160 }).notNull(),
+		nameAm: varchar('name_am', { length: 160 }),
+		description: text('description'),
+		descriptionAm: text('description_am'),
+		/** `fixed`: staff choose the gifts. `custom`: the customer fills the container. */
+		type: mysqlEnum('type', BUNDLE_TYPES).notNull().default('fixed'),
+		/**
+		 * The box, basket or wrap it comes in: a gift product with rules (`container_rule`). Sold
+		 * with the bundle (its price and its stock), and its rules limit what goes in. Required for
+		 * `custom`; optional for `fixed`.
+		 */
+		containerId: int('container_id').references((): AnyMySqlColumn => product.id, {
+			onDelete: 'restrict'
+		}),
+		/** Off the sum of the contents' prices (container included), 0–90. */
+		discountPercent: percent('discount_percent').notNull().default(0),
+		/** Optional: a bundle in a category also shows under that category's chip on the shop. */
+		categoryId: int('category_id').references(() => category.id, { onDelete: 'restrict' }),
+		isFeatured: boolean('is_featured').notNull().default(false),
+		/** Null means hidden from the storefront. */
+		publishedAt: datetime('published_at'),
+		sortOrder: int('sort_order').notNull().default(0),
+		...secureFields
+	},
+	(table) => [index('bundle_published_idx').on(table.publishedAt)]
+);
+
+/** What is in a bundle: a gift and how many of it. One row per gift (checked in the action). */
+export const bundleItem = mysqlTable(
+	'bundle_item',
+	{
+		id: int('id').autoincrement().primaryKey(),
+		bundleId: int('bundle_id')
+			.notNull()
+			.references(() => bundle.id, { onDelete: 'restrict' }),
+		productId: int('product_id')
+			.notNull()
+			.references(() => product.id, { onDelete: 'restrict' }),
+		qty: int('qty').notNull().default(1),
+		sortOrder: int('sort_order').notNull().default(0),
+		...deletionFields
+	},
+	(table) => [index('bundle_item_owner_idx').on(table.bundleId, table.sortOrder)]
+);
+
+export const bundleImage = mysqlTable(
+	'bundle_image',
+	{
+		id: int('id').autoincrement().primaryKey(),
+		bundleId: int('bundle_id')
+			.notNull()
+			.references(() => bundle.id, { onDelete: 'restrict' }),
+		fileName: varchar('file_name', { length: 64 }).notNull(),
+		alt: varchar('alt', { length: 160 }),
+		altAm: varchar('alt_am', { length: 160 }),
+		sortOrder: int('sort_order').notNull().default(0),
+		...deletionFields
+	},
+	(table) => [index('bundle_image_owner_idx').on(table.bundleId, table.sortOrder)]
+);
+
+/**
+ * What fits in a container (a gift product used as a box, basket or wrap): how many gifts of a
+ * category, or of one gift, it holds. A gift goes in only if a rule names it or its category (or
+ * a parent category), and it counts towards every rule that names it, so "Toys: up to 3" and
+ * "Teddy bear: up to 1" both apply to a teddy. A product with rules is a container.
+ */
+export const containerRule = mysqlTable(
+	'container_rule',
+	{
+		id: int('id').autoincrement().primaryKey(),
+		containerId: int('container_id')
+			.notNull()
+			.references(() => product.id, { onDelete: 'restrict' }),
+		/** Exactly one of these two is set (checked in the action). */
+		categoryId: int('category_id').references(() => category.id, { onDelete: 'restrict' }),
+		productId: int('product_id').references(() => product.id, { onDelete: 'restrict' }),
+		minQty: int('min_qty').notNull().default(0),
+		maxQty: int('max_qty').notNull(),
+		sortOrder: int('sort_order').notNull().default(0),
+		...deletionFields
+	},
+	(table) => [index('container_rule_owner_idx').on(table.containerId, table.sortOrder)]
 );

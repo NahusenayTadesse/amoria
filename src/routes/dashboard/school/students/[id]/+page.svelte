@@ -1,4 +1,5 @@
 <script lang="ts">
+	import HiddenField from '@nahu/admin-kit/formComponents/HiddenField.svelte';
 	import { resolve } from '$app/paths';
 	import { enhance } from '$app/forms';
 	import Award from '@lucide/svelte/icons/award';
@@ -76,7 +77,7 @@
 					use:enhance={quick}
 					onsubmit={to === 'cancelled' ? confirmCancel : undefined}
 				>
-					<input type="hidden" name="to" value={to} />
+					<HiddenField name="to" value={to} />
 					<Button type="submit" variant={to === 'cancelled' ? 'outline' : 'default'} size="sm">
 						{REGISTRATION_ACTION_LABELS[to] ?? to}
 					</Button>
@@ -199,7 +200,7 @@
 				<div class="flex flex-wrap gap-2">
 					{#each RESULT_BUTTONS.filter((b) => b.to !== reg.result) as button (button.to)}
 						<form method="POST" action="?/result" use:enhance={quick}>
-							<input type="hidden" name="result" value={button.to} />
+							<HiddenField name="result" value={button.to} />
 							<Button
 								type="submit"
 								size="sm"

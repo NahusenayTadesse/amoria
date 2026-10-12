@@ -1,7 +1,7 @@
 import { datetime, index, int, mysqlEnum, mysqlTable, text, varchar } from 'drizzle-orm/mysql-core';
 import { FULFILMENTS, LOCALES, ORDER_STATUSES } from '../../../constants';
 import { customer } from './customers';
-import { product } from './catalog';
+import { bundle, product } from './catalog';
 import { trafficSource } from './attribution';
 import { birr, contactSnapshot, publicRecord, timestamps } from './columns';
 import { lesserFields } from './secureFields';
@@ -77,7 +77,20 @@ export const orderItem = mysqlTable(
 		nameSnapshot: varchar('name_snapshot', { length: 160 }).notNull(),
 		unitPrice: birr('unit_price').notNull(),
 		qty: int('qty').notNull(),
-		lineTotal: birr('line_total').notNull()
+		lineTotal: birr('line_total').notNull(),
+		/**
+		 * Set on the rows of a bundle sold as one: each gift in it is its own row (so stock and
+		 * sales reports stay per gift), carrying its share of the bundle's discounted price. The
+		 * rows of one bundle line share `bundleId`; the name and number of bundles are snapshots.
+		 */
+		bundleId: int('bundle_id').references(() => bundle.id, { onDelete: 'restrict' }),
+		bundleName: varchar('bundle_name', { length: 160 }),
+		bundleQty: int('bundle_qty'),
+		/**
+		 * Which bundle line of the order the row belongs to (1, 2, …): two boxes built from one
+		 * `custom` bundle hold different gifts, so the bundle's id alone cannot tell them apart.
+		 */
+		bundleLine: int('bundle_line')
 	},
 	(table) => [index('order_item_order_idx').on(table.orderId)]
 );

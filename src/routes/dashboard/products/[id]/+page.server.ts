@@ -1,12 +1,15 @@
 import { error } from '@sveltejs/kit';
-import { and, asc, desc, eq, sql } from 'drizzle-orm';
+import { and, asc, desc, eq, max, ne, sql } from 'drizzle-orm';
 import { message, superValidate } from 'sveltekit-superforms';
 import { zod4 } from 'sveltekit-superforms/adapters';
 import { childCrud, WriteRefused } from '@nahu/admin-kit/server/childCrud';
+import { notDeleted } from '@nahu/admin-kit/server/softDelete';
 import { hasPermission, requirePermission } from '@nahu/admin-kit/server/permissions';
 import { db } from '$lib/server/db';
 import {
+	bundle,
 	category,
+	containerRule,
 	location,
 	orderItem,
 	orders,
@@ -22,21 +25,87 @@ import { locationOptions } from '$lib/server/options';
 import { actorOf } from '$lib/server/paymentAdmin';
 import { adjustStock } from '$lib/server/services/stock';
 import { getSettings } from '$lib/server/services/settings';
-import { invalidate } from '$lib/server/cache';
-import { imageAdd, imageEdit } from '$lib/schemas/catalog';
+import { photoGallery } from '$lib/server/photoGallery';
 import { stockAdjustSchema } from '$lib/schemas/dashboard';
+import { containerRuleAdd, containerRuleEdit } from '$lib/schemas/catalog';
+import { invalidate } from '$lib/server/cache';
 import type { StockReason } from '$lib/stock';
 
-/** Photos: the kit's owner-scoped child CRUD — reads, writes and deletes only this product's rows. */
-const images = childCrud({
+/** Photos: the main one and the gallery (`$lib/server/photoGallery`), scoped to this product. */
+const images = photoGallery({
 	table: productImage,
 	ownerColumn: 'productId',
-	label: 'Photo',
-	addSchema: imageAdd,
-	editSchema: imageEdit,
-	fileFields: ['fileName'],
 	permission: 'catalog.manage',
 	audit: 'product_image'
+});
+
+/**
+ * What fits in this gift when it is used as a box, basket or wrap (§5.2): a rule per category
+ * or per gift. A gift with rules is a container, offered to bundles.
+ */
+const rules = childCrud({
+	table: containerRule,
+	ownerColumn: 'containerId',
+	label: 'Rule',
+	addSchema: containerRuleAdd,
+	editSchema: containerRuleEdit,
+	permission: 'catalog.manage',
+	audit: 'container_rule',
+	transform: async (values, event, before) => {
+		const owner = productId(event.params as { id: string });
+		const [self] = await db
+			.select({ kind: product.kind })
+			.from(product)
+			.where(eq(product.id, owner));
+		if (self?.kind !== 'gift') {
+			throw new WriteRefused(null, 'Only a gift can be a container.');
+		}
+		const categoryId = values.categoryId ? Number(values.categoryId) : null;
+		const giftId = values.productId ? Number(values.productId) : null;
+		if (categoryId) {
+			const [cat] = await db
+				.select({ kind: category.kind })
+				.from(category)
+				.where(and(eq(category.id, categoryId), notDeleted(category)));
+			if (cat?.kind !== 'gift') throw new WriteRefused('categoryId', 'Choose a gift category');
+		}
+		if (giftId) {
+			if (giftId === owner) throw new WriteRefused('productId', 'A container cannot hold itself.');
+			const [gift] = await db
+				.select({ kind: product.kind })
+				.from(product)
+				.where(and(eq(product.id, giftId), notDeleted(product)));
+			if (gift?.kind !== 'gift') throw new WriteRefused('productId', 'Choose a gift');
+		}
+		const [twice] = await db
+			.select({ id: containerRule.id })
+			.from(containerRule)
+			.where(
+				and(
+					eq(containerRule.containerId, owner),
+					categoryId
+						? eq(containerRule.categoryId, categoryId)
+						: eq(containerRule.productId, giftId!),
+					notDeleted(containerRule),
+					before ? ne(containerRule.id, Number(before.id)) : undefined
+				)
+			);
+		if (twice) {
+			throw new WriteRefused(
+				categoryId ? 'categoryId' : 'productId',
+				'There is already a rule for that. Change the one that is there.'
+			);
+		}
+		let sortOrder = before?.sortOrder;
+		if (sortOrder === undefined) {
+			const [{ last }] = await db
+				.select({ last: max(containerRule.sortOrder) })
+				.from(containerRule)
+				.where(and(eq(containerRule.containerId, owner), notDeleted(containerRule)));
+			sortOrder = (last ?? -1) + 1;
+		}
+		return { ...values, categoryId, productId: giftId, sortOrder };
+	}
 });
 
 function productId(params: { id: string }) {
@@ -108,7 +177,51 @@ export const load = async ({ params, locals }) => {
 			: Promise.resolve([{ name: null }])
 	]);
 
+	const isGift = row.product.kind === 'gift';
+	const [rulePage, giftCategories, gifts, usedBy] = isGift
+		? await Promise.all([
+				rules.load(id),
+				db
+					.select({ value: category.id, name: category.name })
+					.from(category)
+					.where(and(eq(category.kind, 'gift'), notDeleted(category)))
+					.orderBy(asc(category.sortOrder), asc(category.name)),
+				db
+					.select({ value: product.id, name: product.name })
+					.from(product)
+					.where(and(eq(product.kind, 'gift'), ne(product.id, id), notDeleted(product)))
+					.orderBy(asc(product.name)),
+				db
+					.select({ id: bundle.id, name: bundle.name, type: bundle.type })
+					.from(bundle)
+					.where(and(eq(bundle.containerId, id), notDeleted(bundle)))
+					.orderBy(asc(bundle.name))
+			])
+		: [null, [], [], []];
+	const categoryName = new Map(giftCategories.map((c) => [c.value, c.name]));
+	const giftName = new Map(gifts.map((g) => [g.value, g.name]));
+
 	return {
+		container: rulePage
+			? {
+					addForm: rulePage.addForm,
+					editForm: rulePage.editForm,
+					// The kit's rows carry the raw columns; the section shows what each rule is about.
+					rows: (
+						rulePage.rows as unknown as {
+							id: number;
+							categoryId: number | null;
+							productId: number | null;
+						}[]
+					).map((r) => ({
+						...r,
+						category: r.categoryId ? (categoryName.get(r.categoryId) ?? '—') : '',
+						gift: r.productId ? (giftName.get(r.productId) ?? '—') : ''
+					})),
+					options: { categoryId: giftCategories, productId: gifts },
+					usedBy
+				}
+			: null,
 		product: row.product,
 		categoryName: row.categoryName,
 		heldForUnpaid: Number(held?.qty ?? 0),
@@ -123,28 +236,21 @@ export const load = async ({ params, locals }) => {
 	};
 };
 
-/** Photo writes change what guests see and which files `/media` may serve. */
-const refreshShop = () => {
+/** A rule changes what the shop's boxes may hold. */
+const touched = <T>(result: T) => {
 	invalidate('catalog');
-	invalidate('public-images');
+	return result;
 };
 
 export const actions = {
-	addImage: async (event) => {
-		const result = await images.actions.add(event, productId(event.params));
-		refreshShop();
-		return result;
-	},
-	editImage: async (event) => {
-		const result = await images.actions.edit(event, productId(event.params));
-		refreshShop();
-		return result;
-	},
-	deleteImage: async (event) => {
-		const result = await images.actions.delete(event, productId(event.params));
-		refreshShop();
-		return result;
-	},
+	addRule: async (event) => touched(await rules.actions.add(event, productId(event.params))),
+	editRule: async (event) => touched(await rules.actions.edit(event, productId(event.params))),
+	deleteRule: async (event) => touched(await rules.actions.delete(event, productId(event.params))),
+
+	addPhotos: async (event) => images.actions.addPhotos(event, productId(event.params)),
+	editPhoto: async (event) => images.actions.editPhoto(event, productId(event.params)),
+	deletePhoto: async (event) => images.actions.deletePhoto(event, productId(event.params)),
+	movePhoto: async (event) => images.actions.movePhoto(event, productId(event.params)),
 
 	/** A delivery, damage, a loss, or a stock count (`stock.adjustStock`). */
 	adjust: async (event) => {

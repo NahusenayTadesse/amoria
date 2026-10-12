@@ -21,7 +21,7 @@
 	<div
 		class={[
 			'mx-auto grid max-w-6xl items-center gap-8 px-4 pt-12 pb-14 sm:px-8 sm:pt-20 sm:pb-20',
-			art && 'lg:grid-cols-[1.1fr_0.9fr] lg:gap-12'
+			art && 'lg:grid-cols-[0.95fr_1.05fr] lg:gap-12'
 		]}
 	>
 		<div class="relative z-10">
@@ -53,7 +53,7 @@
 			{/if}
 		</div>
 		{#if art}
-			<div class="relative mx-auto w-full max-w-[26rem] lg:max-w-none" aria-hidden="true">
+			<div class="relative mx-auto w-full max-w-[30rem] lg:max-w-none" aria-hidden="true">
 				{@render art()}
 			</div>
 		{/if}

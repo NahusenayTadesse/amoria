@@ -1,4 +1,6 @@
 <script lang="ts">
+	import HiddenField from '@nahu/admin-kit/formComponents/HiddenField.svelte';
+	import SelectComp from '@nahu/admin-kit/formComponents/SelectComp.svelte';
 	import { enhance } from '$app/forms';
 	import PackageX from '@lucide/svelte/icons/package-x';
 	import ShieldAlert from '@lucide/svelte/icons/shield-alert';
@@ -98,18 +100,19 @@
 								{#if data.canAct}
 									<td class="p-2">
 										<form method="POST" action="?/lot" use:enhance class="flex gap-1">
-											<input type="hidden" name="lotId" value={row.lotId} />
-											<select
-												name="status"
-												class="h-8 rounded-md border bg-background px-2 text-xs"
-												aria-label="What to do with lot {row.lotNumber}"
-											>
-												{#each LOT_ACTIONS as a (a.value)}
-													<option value={a.value} selected={row.lotStatus === a.value}
-														>{a.name}</option
-													>
-												{/each}
-											</select>
+											<HiddenField name="lotId" value={row.lotId} />
+											<div class="w-40">
+												<label for="lot-{row.lotId}" class="sr-only"
+													>What to do with lot {row.lotNumber}</label
+												>
+												<SelectComp
+													id="lot-{row.lotId}"
+													name="status"
+													label="What to do with lot {row.lotNumber}"
+													value={row.lotStatus}
+													items={LOT_ACTIONS}
+												/>
+											</div>
 											<Button type="submit" size="sm" variant="outline">Set</Button>
 										</form>
 									</td>

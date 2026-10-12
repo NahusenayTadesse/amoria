@@ -21,8 +21,7 @@ const CODE_ONLY_PERMISSIONS = [
 	'orders.manage',
 	'payments.record',
 	'requisitions.approve',
-	'pos.discount',
-	'staff.manage'
+	'pos.discount'
 ] as const;
 
 /** Wording for the permission checklist on the roles screen. */
@@ -46,7 +45,10 @@ export const DESCRIPTIONS: Record<string, string> = {
 	'reports.view': 'See stock, sales and VAT reports',
 	'data.import': 'Import products, suppliers and opening stock from a spreadsheet',
 	'settings.manage': 'Change delivery areas, bank accounts and shop settings',
-	'staff.manage': 'Create staff accounts and decide what roles may do'
+	'renters.manage':
+		'Approve renters on the marketplace, review their listings, and decide who may post without review',
+	'staff.manage':
+		'Open the admin panel: add staff, reset passwords, and decide what each role may do'
 };
 
 /** The role every permission is granted to on each boot. Seeded; cannot lose a permission. */
@@ -128,7 +130,7 @@ export async function loadGrant(
 			.where(
 				and(
 					eq(specialPermissions.userId, userId),
-					notInArray(user.role, ['customer']),
+					notInArray(user.role, ['customer', 'renter']),
 					notDeleted(specialPermissions)
 				)
 			)

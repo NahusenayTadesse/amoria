@@ -1,4 +1,6 @@
 <script lang="ts">
+	import SelectComp from '@nahu/admin-kit/formComponents/SelectComp.svelte';
+	import HiddenField from '@nahu/admin-kit/formComponents/HiddenField.svelte';
 	import { enhance } from '$app/forms';
 	import { resolve } from '$app/paths';
 	import { toast } from 'svelte-sonner';
@@ -367,15 +369,17 @@
 		<div class="flex flex-col gap-2">
 			{#each payments as payment, i (i)}
 				<div class="grid grid-cols-[1fr_7rem] gap-2">
-					<select
-						bind:value={payment.method}
-						class="h-9 rounded-md border bg-background px-2 text-sm"
-						aria-label="Payment method {i + 1}"
-					>
-						{#each methods as m (m.value)}
-							<option value={m.value}>{m.name}</option>
-						{/each}
-					</select>
+					<!-- Not posted itself: the payments go in the sale's JSON payload. -->
+					<div>
+						<label for="till-method-{i}" class="sr-only">Payment method {i + 1}</label>
+						<SelectComp
+							id="till-method-{i}"
+							name="method-{i}"
+							label="Payment method {i + 1}"
+							bind:value={payment.method}
+							items={methods}
+						/>
+					</div>
 					<Input
 						type="number"
 						min="0"
@@ -434,7 +438,7 @@
 		{/if}
 
 		<form method="POST" action="?/sell" use:enhance={submit} class="flex gap-2">
-			<input type="hidden" name="payload" value={payload} />
+			<HiddenField name="payload" value={payload} />
 			<Button type="submit" class="h-11 flex-1 text-base" disabled={!canSell}>
 				{busy ? 'Selling…' : 'Complete sale'}
 			</Button>

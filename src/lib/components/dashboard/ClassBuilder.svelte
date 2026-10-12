@@ -1,4 +1,6 @@
 <script lang="ts">
+	import { Checkbox } from '@nahu/admin-kit/components/ui/checkbox/index.js';
+	import HiddenField from '@nahu/admin-kit/formComponents/HiddenField.svelte';
 	import { enhance } from '$app/forms';
 	import { SvelteMap } from 'svelte/reactivity';
 	import { Button } from '@nahu/admin-kit/components/ui/button/index.js';
@@ -150,12 +152,11 @@
 		<fieldset class="flex flex-wrap items-center gap-x-5 gap-y-2">
 			<legend class="mb-2 text-sm font-medium">Shifts (one class per shift)</legend>
 			{#each shifts as shift (shift.id)}
-				<label class="inline-flex items-center gap-2 text-sm">
-					<input
-						type="checkbox"
-						class="size-4 accent-primary"
+				<label for="shift-{shift.id}" class="inline-flex items-center gap-2 text-sm">
+					<Checkbox
+						id="shift-{shift.id}"
 						checked={chosenShifts.includes(shift.id)}
-						onchange={(e) => toggleShift(shift.id, e.currentTarget.checked)}
+						onCheckedChange={(checked) => toggleShift(shift.id, checked)}
 					/>
 					{shift.name}{#if shift.timeText}<span class="text-muted-foreground"
 							>({shift.timeText})</span
@@ -171,8 +172,8 @@
 	{/if}
 
 	{#if lengthChanged}
-		<label class="inline-flex items-center gap-2 text-sm">
-			<input type="checkbox" class="size-4 accent-primary" bind:checked={saveDays} />
+		<label for="builder-save-days" class="inline-flex items-center gap-2 text-sm">
+			<Checkbox id="builder-save-days" bind:checked={saveDays} />
 			Also make {length} days this course's length
 		</label>
 	{/if}
@@ -203,13 +204,11 @@
 					{#each plan as c (c.key)}
 						<tr class={['border-t', (c.exists || skipped.get(c.key)) && 'text-muted-foreground']}>
 							<td class="p-2">
-								<input
-									type="checkbox"
-									class="size-4 accent-primary"
+								<Checkbox
 									aria-label="Create the class starting {c.startDate}"
 									disabled={c.exists}
 									checked={!c.exists && !skipped.get(c.key)}
-									onchange={(e) => skipped.set(c.key, !e.currentTarget.checked)}
+									onCheckedChange={(checked) => skipped.set(c.key, !checked)}
 								/>
 							</td>
 							<td class="p-2">
@@ -236,8 +235,8 @@
 		</div>
 	{/if}
 
-	<input type="hidden" name="classes" value={payload} />
-	{#if saveDays && lengthChanged}<input type="hidden" name="saveDays" value={length} />{/if}
+	<HiddenField name="classes" value={payload} />
+	{#if saveDays && lengthChanged}<HiddenField name="saveDays" value={length} />{/if}
 
 	<div class="flex flex-wrap items-center gap-3">
 		<Button

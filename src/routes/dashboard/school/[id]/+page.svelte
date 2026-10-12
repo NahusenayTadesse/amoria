@@ -1,4 +1,5 @@
 <script lang="ts">
+	import HiddenField from '@nahu/admin-kit/formComponents/HiddenField.svelte';
 	import { resolve } from '$app/paths';
 	import { enhance } from '$app/forms';
 	import { toast } from 'svelte-sonner';
@@ -256,7 +257,7 @@
 									use:enhance={() => onDelete('Photo removed')}
 									class="absolute top-1 right-1"
 								>
-									<input type="hidden" name="id" value={img.id} />
+									<HiddenField name="id" value={img.id} />
 									<Button
 										type="submit"
 										size="icon"

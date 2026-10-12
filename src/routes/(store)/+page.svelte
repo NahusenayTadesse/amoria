@@ -1,4 +1,5 @@
 <script lang="ts">
+	import ListingCard from '$lib/components/store/ListingCard.svelte';
 	import ArrowUpRight from '@lucide/svelte/icons/arrow-up-right';
 	import ArrowRight from '@lucide/svelte/icons/arrow-right';
 	import Check from '@lucide/svelte/icons/check';
@@ -36,6 +37,31 @@
 	}
 	const external = (href: string) => href.startsWith('https://');
 	const hasChat = $derived(!!(data.contact.whatsapp.trim() || data.contact.telegram.trim()));
+
+	/** Small photos down the left margin of the hero (wide screens only). */
+	const sideShots = [
+		{
+			src: '/images/demo/gallery-aisle-chairs-480.webp',
+			h: 720,
+			place: 'top-[10%] left-[1.5rem]',
+			tilt: -6,
+			delay: 0.8
+		},
+		{
+			src: '/images/demo/gallery-table-garden-480.webp',
+			h: 720,
+			place: 'top-[44%] left-[0.5rem]',
+			tilt: 5,
+			delay: 2.2
+		},
+		{
+			src: '/images/demo/gallery-garden-reception-480.webp',
+			h: 720,
+			place: 'bottom-[8%] left-[2rem]',
+			tilt: -4,
+			delay: 3.4
+		}
+	];
 
 	const events = [
 		m.home_event_wedding,
@@ -103,8 +129,27 @@
 
 <!-- ============================== Hero ============================== -->
 <section class="hero relative isolate overflow-hidden">
+	<!-- Floating photos in the left margin of wide screens, so that side is not bare. -->
 	<div
-		class="mx-auto grid max-w-6xl items-center gap-6 px-4 pt-10 pb-12 sm:px-8 lg:min-h-[calc(100dvh-4rem)] lg:grid-cols-[1.05fr_0.95fr] lg:gap-10 lg:pt-6 lg:pb-16"
+		class="pointer-events-none absolute inset-y-0 left-0 hidden w-[10rem] xl:block"
+		aria-hidden="true"
+	>
+		{#each sideShots as shot, index (shot.src)}
+			<img
+				src={asset(shot.src)}
+				alt=""
+				width="480"
+				height={shot.h}
+				loading="lazy"
+				decoding="async"
+				class="side-shot absolute w-28 rounded-2xl border-[5px] border-white object-cover shadow-[0_20px_40px_-20px_var(--am-ink)] {shot.place}"
+				style="--tilt: {shot.tilt}deg; --delay: {shot.delay}s; --i: {index +
+					6}; aspect-ratio: 4 / 5"
+			/>
+		{/each}
+	</div>
+	<div
+		class="mx-auto grid max-w-6xl items-center gap-6 px-4 pt-10 pb-12 sm:px-8 lg:min-h-[calc(100dvh-4rem)] lg:grid-cols-[0.9fr_1.1fr] lg:gap-10 lg:pt-6 lg:pb-16"
 	>
 		<div class="relative z-10">
 			<p
@@ -127,7 +172,10 @@
 				</span>
 			</h1>
 
-			<p class="rise mt-6 max-w-[46ch] text-base text-muted-foreground sm:text-lg" style="--i: 4">
+			<p
+				class="rise mt-6 max-w-[46ch] text-base text-muted-foreground sm:text-lg lg:max-w-[38ch]"
+				style="--i: 4"
+			>
 				{m.home_lede()}
 			</p>
 
@@ -155,9 +203,9 @@
 			</p>
 		</div>
 
-		<div class="relative mx-auto w-full max-w-[30rem] lg:max-w-none">
+		<div class="relative mx-auto w-full max-w-[32rem] lg:max-w-none">
 			<div class="glow" aria-hidden="true"></div>
-			<div class="relative mx-auto aspect-[600/660] w-full max-w-[34rem]">
+			<div class="relative mx-auto aspect-[600/700] w-full max-w-[38rem]">
 				<HeroArt />
 				<HeroPhotos />
 			</div>
@@ -599,6 +647,48 @@
 	</section>
 {/if}
 
+<!-- ============================== Rentals ============================== -->
+{#if data.rentals.length}
+	<section id="rentals" class="bg-card py-12 sm:py-28">
+		<div class="mx-auto max-w-6xl px-4 sm:px-8">
+			<div use:reveal class="flex flex-wrap items-end justify-between gap-4">
+				<div class="max-w-xl">
+					<p class="text-xs font-semibold tracking-[0.22em] text-[var(--am-ribbon)] uppercase">
+						{m.home_rentals_kicker()}
+					</p>
+					<h2 class="display mt-3 text-3xl leading-[1.08] font-bold sm:text-5xl">
+						{m.home_rentals_heading()}
+					</h2>
+					<p class="mt-4 text-muted-foreground">{m.home_rentals_lede()}</p>
+				</div>
+				<a
+					href={path('/rentals')}
+					class="link-arrow group inline-flex min-h-11 items-center gap-2 text-sm font-semibold text-foreground"
+				>
+					<span class="link-arrow-text">{m.home_rentals_all()}</span>
+					<ArrowRight
+						class="h-4 w-4 transition-transform duration-300 group-hover:translate-x-1.5"
+						aria-hidden="true"
+					/>
+				</a>
+			</div>
+			<ul class="mt-10 grid gap-6 sm:mt-14 sm:grid-cols-2 lg:grid-cols-4">
+				{#each data.rentals as listing, index (listing.id)}
+					<li use:reveal style="--i: {index % 4}"><ListingCard {listing} /></li>
+				{/each}
+			</ul>
+			<p class="mt-10 text-sm text-muted-foreground">
+				{m.home_rentals_join()}
+				<a
+					href={path('/renters/join')}
+					class="font-semibold text-foreground underline underline-offset-4"
+					>{m.market_join_cta()}</a
+				>
+			</p>
+		</div>
+	</section>
+{/if}
+
 <!-- ============================== Décor school ============================== -->
 <section id="school" class="mx-auto max-w-6xl scroll-mt-20 px-4 py-20 sm:px-8 sm:py-28">
 	<div class="grid items-center gap-10 lg:grid-cols-2 lg:gap-16">
@@ -770,6 +860,29 @@
 				transparent 60%
 			),
 			var(--background);
+	}
+	.side-shot {
+		rotate: var(--tilt);
+		animation:
+			side-arrive 0.9s cubic-bezier(0.2, 0.75, 0.2, 1) calc(var(--i) * 0.12s + 0.1s) both,
+			side-drift 8s ease-in-out var(--delay) infinite;
+	}
+	@keyframes side-arrive {
+		from {
+			opacity: 0;
+			transform: translateX(-24px);
+		}
+	}
+	@keyframes side-drift {
+		50% {
+			translate: 0 -10px;
+			rotate: calc(var(--tilt) * 0.5);
+		}
+	}
+	@media (prefers-reduced-motion: reduce) {
+		.side-shot {
+			animation: none;
+		}
 	}
 	.glow {
 		position: absolute;

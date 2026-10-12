@@ -1,4 +1,5 @@
 <script lang="ts">
+	import HiddenField from '@nahu/admin-kit/formComponents/HiddenField.svelte';
 	import InputComp from '@nahu/admin-kit/formComponents/InputComp.svelte';
 	import { ADJUSTMENT_REASON_LABELS } from '$lib/stock';
 	import type { Option } from '$lib/server/options';
@@ -23,7 +24,7 @@
 	}));
 </script>
 
-<input type="hidden" name="type" value={type} />
+<HiddenField name="type" value={type} />
 <div class="grid gap-4 sm:grid-cols-2">
 	<InputComp {form} {errors} name="docDate" type="date" label="Date" />
 

@@ -29,13 +29,33 @@ const receipt = z
 	.refine((file) => file.size <= MAX_RECEIPT_BYTES, { error: () => m.checkout_receipt_too_big() })
 	.refine((file) => RECEIPT_TYPES.includes(file.type), { error: () => m.checkout_receipt_type() });
 
-/** The bag, posted as JSON in a hidden field and re-read on the server; never trusted for prices. */
+/**
+ * The bag, posted as JSON in a hidden field and re-read on the server; never trusted for prices.
+ * A line is a gift (`productId`) or a bundle (`bundleId`, with `items` for a box the customer built).
+ */
 export const cartLines = z
 	.array(
-		z.object({
-			productId: z.number().int().positive(),
-			qty: z.number().int().min(1).max(20)
-		})
+		z.union([
+			z.object({
+				productId: z.number().int().positive(),
+				qty: z.number().int().min(1).max(20)
+			}),
+			z.object({
+				bundleId: z.number().int().positive(),
+				qty: z.number().int().min(1).max(20),
+				/** A build-your-own box: what goes in it. The container's rules are checked on the server. */
+				items: z
+					.array(
+						z.object({
+							productId: z.number().int().positive(),
+							qty: z.number().int().min(1).max(200)
+						})
+					)
+					.min(1)
+					.max(50)
+					.optional()
+			})
+		])
 	)
 	.min(1)
 	.max(20);

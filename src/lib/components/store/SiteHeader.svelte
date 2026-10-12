@@ -3,6 +3,8 @@
 	import ChevronDown from '@lucide/svelte/icons/chevron-down';
 	import InstallButton from '$lib/components/store/InstallButton.svelte';
 	import Globe from '@lucide/svelte/icons/globe';
+	import Menu from '@lucide/svelte/icons/menu';
+	import { pushState } from '$app/navigation';
 	import { building } from '$app/environment';
 	import { page } from '$app/state';
 	import { resolve } from '$app/paths';
@@ -51,12 +53,18 @@
 	const links = [
 		{ to: '/shop', label: m.nav_shop, desktopOnly: false },
 		{ to: '/school', label: m.nav_school, desktopOnly: false },
+		{ to: '/decor/quote', label: m.nav_decor, desktopOnly: false },
+		{ to: '/rentals', label: m.nav_rentals, desktopOnly: false },
+		{ to: '/spaces', label: m.nav_spaces, desktopOnly: false },
 		{ to: '/about', label: m.nav_about, desktopOnly: true },
 		{ to: '/contact', label: m.nav_contact, desktopOnly: false }
 	];
 
 	/** Whether the visitor is on this link's page, in either language (`/am/about` is `/about`). */
-	const isCurrent = (to: string) => deLocalizeHref(page.url.pathname).startsWith(to);
+	const isCurrent = (to: string) =>
+		deLocalizeHref(page.url.pathname).startsWith(to === '/decor/quote' ? '/decor' : to);
+
+	const menuOpen = $derived(page.state.sheet === 'more');
 </script>
 
 <svelte:window onclick={dismiss} onkeydown={dismiss} onscroll={onScroll} />
@@ -68,7 +76,7 @@
 	]}
 >
 	<div
-		class="mx-auto flex h-14 max-w-6xl items-center justify-between gap-4 px-4 max-sm:justify-center sm:h-20 sm:px-8"
+		class="relative mx-auto flex h-14 max-w-6xl items-center justify-between gap-4 px-4 sm:h-20 sm:px-8"
 	>
 		<a
 			href={resolve(localizeHref('/') as AppPath)}
@@ -77,6 +85,18 @@
 		>
 			<img src="/brand/logo.png" alt="" class="h-11 w-auto sm:h-16" width="432" height="344" />
 		</a>
+
+		<!-- Phones: the logo sits on the left, the hamburger on the right. It opens the same sheet as the tab bar's More. -->
+		<button
+			type="button"
+			aria-label={m.nav_menu()}
+			aria-haspopup="dialog"
+			aria-expanded={menuOpen}
+			onclick={() => pushState('', { sheet: 'more' })}
+			class="-mr-2 ml-auto grid h-11 w-11 place-items-center rounded-lg text-white hover:bg-white/10 focus-visible:outline-2 focus-visible:outline-[var(--am-gold)] sm:hidden"
+		>
+			<Menu class="h-6 w-6" aria-hidden="true" />
+		</button>
 
 		<nav aria-label={m.nav_shop()} class="ml-auto flex items-center gap-0.5 text-sm max-sm:hidden">
 			{#each links as link (link.to)}

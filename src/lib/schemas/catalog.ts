@@ -1,5 +1,6 @@
 import { z } from 'zod/v4';
-import { PRODUCT_KINDS, TAX_CODES } from '$lib/constants';
+import { BUNDLE_TYPES, PRODUCT_KINDS, TAX_CODES } from '$lib/constants';
+import { MAX_BUNDLE_DISCOUNT } from '$lib/bundle';
 
 /** Catalog and shop-settings forms for the dashboard. Shared by the page and the action. */
 
@@ -81,6 +82,74 @@ function priceForKind(data: z.infer<typeof product>, ctx: z.RefinementCtx) {
 export const productAdd = product.superRefine(priceForKind);
 export const productEdit = product.extend({ id: z.coerce.number() }).superRefine(priceForKind);
 
+/** A bundle (§5.2): its own name, text and photos; the price comes from its contents. */
+const bundleBase = z.object({
+	name: z.string().trim().min(2, 'Enter a name').max(160),
+	nameAm: optionalText(160),
+	slug,
+	discountPercent: z.coerce
+		.number('Enter a percentage')
+		.min(0, 'Cannot be below 0')
+		.max(MAX_BUNDLE_DISCOUNT, `At most ${MAX_BUNDLE_DISCOUNT}%`)
+		.default(0),
+	categoryId: optionalId,
+	/** `fixed`: staff choose the gifts. `custom`: the customer fills the container. */
+	type: z.enum(BUNDLE_TYPES).default('fixed'),
+	/** The box, basket or wrap: a gift with rules. Required for `custom` (checked on the server). */
+	containerId: optionalId,
+	isFeatured: z.boolean().default(false),
+	/** Stored as `publishedAt`, as on products. */
+	published: z.boolean().default(false),
+	description: optionalText(2000),
+	descriptionAm: optionalText(2000),
+	sortOrder: z.coerce.number().int().min(0).default(0),
+	status: z.boolean().default(true)
+});
+export const bundleAdd = bundleBase;
+export const bundleEdit = bundleBase.extend({ id: z.coerce.number() });
+
+/** One gift in a bundle, and how many of it. */
+const bundleItemBase = z.object({
+	productId: z.coerce.number('Choose a gift').int().positive('Choose a gift'),
+	qty: z.coerce.number('Enter how many').int('A whole number').min(1, 'At least 1').max(20)
+});
+export const bundleItemAdd = bundleItemBase;
+export const bundleItemEdit = bundleItemBase.extend({ id: z.coerce.number() });
+
+/**
+ * A container's rule: up to `maxQty` gifts of one category (or of one gift), and at least
+ * `minQty`. Exactly one of the two is chosen.
+ */
+const containerRuleBase = z.object({
+	categoryId: optionalId,
+	productId: optionalId,
+	minQty: z.coerce.number('Enter a number').int('A whole number').min(0).default(0),
+	maxQty: z.coerce
+		.number('Enter the most it holds')
+		.int('A whole number')
+		.min(1, 'At least 1')
+		.max(500, 'At most 500')
+});
+function oneTarget(
+	data: { categoryId?: number; productId?: number; minQty: number; maxQty: number },
+	ctx: z.RefinementCtx
+) {
+	if (!data.categoryId === !data.productId) {
+		ctx.addIssue({
+			code: 'custom',
+			path: ['categoryId'],
+			message: 'Choose a category or one gift, not both'
+		});
+	}
+	if (data.minQty > data.maxQty) {
+		ctx.addIssue({ code: 'custom', path: ['minQty'], message: 'Cannot be more than the most' });
+	}
+}
+export const containerRuleAdd = containerRuleBase.superRefine(oneTarget);
+export const containerRuleEdit = containerRuleBase
+	.extend({ id: z.coerce.number() })
+	.superRefine(oneTarget);
+
 const categoryBase = z.object({
 	kind: z.enum(PRODUCT_KINDS).default('gift'),
 	name: z.string().trim().min(2, 'Enter a name').max(120),
@@ -118,6 +187,12 @@ export const bankAccountEdit = accountBase.extend({ id: z.coerce.number() });
 /** Shop settings (§5.10) staff may change. Stored one row per key. */
 export const shopSettingsSchema = z.object({
 	holdMinutes: z.coerce.number().int().min(5, 'At least 5 minutes').max(1440),
+	renterHoldHours: z.coerce
+		.number()
+		.int()
+		.min(1, 'At least 1 hour')
+		.max(168, 'At most a week (168 hours)')
+		.default(24),
 	deliveryEnabled: z.boolean().default(true),
 	freeDeliveryThreshold: z.coerce.number().min(0),
 	freeDeliverySuggestAt: z.coerce.number().min(0),

@@ -27,6 +27,14 @@ import PackageOpen from '@lucide/svelte/icons/package-open';
 import Lightbulb from '@lucide/svelte/icons/lightbulb';
 import Clock from '@lucide/svelte/icons/clock';
 import MessageSquareQuote from '@lucide/svelte/icons/message-square-quote';
+import Building2 from '@lucide/svelte/icons/building-2';
+import ShieldCheck from '@lucide/svelte/icons/shield-check';
+import UserCog from '@lucide/svelte/icons/user-cog';
+import Handshake from '@lucide/svelte/icons/handshake';
+import BadgeCheck from '@lucide/svelte/icons/badge-check';
+import ListChecks from '@lucide/svelte/icons/list-checks';
+import ReceiptText from '@lucide/svelte/icons/receipt-text';
+import Gift from '@lucide/svelte/icons/gift';
 import type { NavItem } from '@nahu/admin-kit/navigation';
 
 /** The sidebar and the search palette. Each entry is shown only if `access` lets the viewer in. */
@@ -35,7 +43,19 @@ export const NAVIGATION: NavItem[] = [
 	{ title: 'Orders', url: '/dashboard/orders', icon: ShoppingBag },
 	{ title: 'Quote requests', url: '/dashboard/quote-requests', icon: MessageSquareQuote },
 	{ title: 'Products', url: '/dashboard/products', icon: Package },
+	{ title: 'Bundles', url: '/dashboard/bundles', icon: Gift },
 	{ title: 'Categories', url: '/dashboard/categories', icon: Tags },
+	{ title: 'Rental spaces', url: '/dashboard/spaces', icon: Building2 },
+	{
+		title: 'Marketplace',
+		url: '/dashboard/renters',
+		icon: Handshake,
+		items: [
+			{ title: 'Renters', url: '/dashboard/renters', icon: BadgeCheck },
+			{ title: 'Listings to review', url: '/dashboard/renters/listings', icon: ListChecks },
+			{ title: 'Orders', url: '/dashboard/renters/orders', icon: ReceiptText }
+		]
+	},
 	{
 		title: 'Till',
 		url: '/dashboard/pos',
@@ -102,6 +122,15 @@ export const NAVIGATION: NavItem[] = [
 			{ title: 'Delivery areas', url: '/dashboard/settings/delivery-areas', icon: Truck },
 			{ title: 'Bank accounts', url: '/dashboard/settings/bank-accounts', icon: Landmark }
 		]
+	},
+	{
+		title: 'Admin panel',
+		url: '/dashboard/admin',
+		icon: ShieldCheck,
+		items: [
+			{ title: 'Staff', url: '/dashboard/admin/staff', icon: UserCog },
+			{ title: 'Roles', url: '/dashboard/admin/roles', icon: ShieldCheck }
+		]
 	}
 ];
 
@@ -109,6 +138,7 @@ export const NAVIGATION: NavItem[] = [
 export const ENTITIES: Record<string, string> = {
 	order: '/dashboard/orders',
 	product: '/dashboard/products',
+	bundle: '/dashboard/bundles',
 	document: '/dashboard/stock/documents',
 	supplier: '/dashboard/suppliers',
 	purchase_order: '/dashboard/purchasing',
@@ -117,5 +147,10 @@ export const ENTITIES: Record<string, string> = {
 	pos_shift: '/dashboard/pos/shifts',
 	course: '/dashboard/school',
 	registration: '/dashboard/school/students',
-	quote_request: '/dashboard/quote-requests'
+	quote_request: '/dashboard/quote-requests',
+	rental_space: '/dashboard/spaces',
+	renter: '/dashboard/renters',
+	renter_listing: '/dashboard/renters/listings',
+	staff: '/dashboard/admin/staff',
+	role: '/dashboard/admin/roles'
 };

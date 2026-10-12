@@ -10,6 +10,7 @@
 	import * as Sheet from '@nahu/admin-kit/components/ui/sheet/index.js';
 	import { createForm } from '@nahu/admin-kit/forms/createForm';
 	import InputComp from '@nahu/admin-kit/formComponents/InputComp.svelte';
+	import HiddenField from '@nahu/admin-kit/formComponents/HiddenField.svelte';
 	import Truck from '@lucide/svelte/icons/truck';
 	import { localizeHref } from '$lib/paraglide/runtime';
 	import { m } from '$lib/paraglide/messages.js';
@@ -85,12 +86,7 @@
 		if (bag.count > 0) step = 2;
 	}
 
-	/** Set once the customer tries to leave the details step, so an unchosen area is not an error on arrival. */
-	let triedDetails = $state(false);
-	const areaError = $derived(triedDetails ? firstError($errors.deliveryAreaId) : undefined);
-
 	async function toPayment() {
-		triedDetails = true;
 		const fields = ['name', 'phone', 'email'] as const;
 		const deliveryFields = ['deliveryAreaId', 'deliveryAddress'] as const;
 		const results = await Promise.all(
@@ -113,7 +109,12 @@
 		void shareLink({
 			title: m.bag_share_title(),
 			text: m.bag_share_text({ count: bag.count, total: birr(bag.total) }),
-			url: cartLink(bag.items.map((item) => ({ slug: item.product.slug, qty: item.qty })))
+			// A built box has no link of its own: the shared bag carries the rest.
+			url: cartLink(
+				bag.items
+					.filter((item) => !item.picks)
+					.map((item) => ({ slug: item.product.slug, qty: item.qty }))
+			)
 		});
 	}
 
@@ -124,13 +125,6 @@
 	const freeReached = $derived(
 		delivery.enabled && qualifiesForFreeDelivery(bag.total, delivery.free)
 	);
-
-	/** superforms nests a field's errors differently by type; this reads the first message of any. */
-	function firstError(errors: unknown): string | undefined {
-		if (Array.isArray(errors)) return errors[0];
-		const nested = (errors as { _errors?: string[] } | undefined)?._errors;
-		return nested?.[0];
-	}
 </script>
 
 <!-- fixtec's nudge: how far from free delivery once it is within reach, then that it is free. -->
@@ -198,7 +192,7 @@
 			class="flex min-h-0 flex-1 flex-col"
 		>
 			<!-- The bag goes with the form; the server re-reads every product and price. -->
-			<input type="hidden" name="cart" value={bag.toJSON()} />
+			<HiddenField name="cart" value={bag.toJSON()} />
 
 			<div class="min-h-0 flex-1 overflow-y-auto px-5 py-5">
 				<!-- Inactive steps are hidden, not removed, so their fields still post. -->
@@ -207,12 +201,24 @@
 						<p class="text-sm text-muted-foreground">{m.checkout_bag_empty()}</p>
 					{:else}
 						<ul class="flex flex-col divide-y divide-border">
-							{#each bag.items as item (item.productId)}
+							{#each bag.items as item (item.key)}
 								{@const product = item.product}
 								{@const name = localized(product, 'name')}
 								<li class="flex items-center gap-3 py-3">
 									<div class="flex flex-1 flex-col">
 										<span class="text-sm font-medium">{name}</span>
+										{#if item.picks}
+											<span class="text-xs text-muted-foreground">
+												{[
+													localized(product.bundle!.custom!.container, 'name'),
+													...item.picks.map(
+														(pick) => `${pick.qty} × ${localized(pick.choice, 'name')}`
+													)
+												].join(', ')}
+											</span>
+										{:else if product.kind === 'bundle'}
+											<span class="text-xs text-muted-foreground">{m.bundle_label()}</span>
+										{/if}
 										<span class="text-sm text-muted-foreground tabular-nums"
 											>{birr(item.total)}</span
 										>
@@ -222,7 +228,7 @@
 											type="button"
 											class="grid h-9 w-9 place-items-center"
 											aria-label={m.product_decrease({ name })}
-											onclick={() => bag.set(product, item.qty - 1)}
+											onclick={() => bag.setLine(item.key, item.qty - 1)}
 										>
 											<Minus class="h-3.5 w-3.5" />
 										</button>
@@ -231,8 +237,8 @@
 											type="button"
 											class="grid h-9 w-9 place-items-center disabled:opacity-40"
 											aria-label={m.product_increase({ name })}
-											disabled={item.qty >= bag.maxFor(product)}
-											onclick={() => bag.add(product)}
+											disabled={item.qty >= item.max}
+											onclick={() => bag.setLine(item.key, item.qty + 1)}
 										>
 											<Plus class="h-3.5 w-3.5" />
 										</button>
@@ -241,7 +247,7 @@
 										type="button"
 										class="grid h-9 w-9 place-items-center text-muted-foreground hover:text-foreground"
 										aria-label={m.checkout_remove({ name })}
-										onclick={() => bag.set(product, 0)}
+										onclick={() => bag.setLine(item.key, 0)}
 									>
 										<X class="h-4 w-4" />
 									</button>
@@ -270,63 +276,37 @@
 					<ContactFields {form} {errors} />
 
 					{#if delivery.enabled}
-						<fieldset class="flex flex-col gap-2">
-							<legend class="mb-2 text-sm font-medium">{m.checkout_fulfilment_label()}</legend>
-							{#each [{ value: 'pickup', title: m.checkout_pickup(), hint: m.checkout_pickup_hint() }, { value: 'delivery', title: m.checkout_delivery(), hint: m.checkout_delivery_hint() }] as option (option.value)}
-								<label
-									class={[
-										'flex cursor-pointer items-start gap-3 rounded-[var(--radius)] border bg-card p-4 transition-colors',
-										$form.fulfilment === option.value
-											? 'border-[var(--am-ribbon)] ring-1 ring-[var(--am-ribbon)]'
-											: 'border-border hover:border-foreground/40'
-									]}
-								>
-									<input
-										type="radio"
-										name="fulfilment"
-										value={option.value}
-										bind:group={$form.fulfilment}
-										class="mt-1 accent-[var(--am-ribbon)]"
-									/>
-									<span class="flex flex-col gap-0.5">
-										<span class="text-sm font-semibold">{option.title}</span>
-										<span class="text-sm text-muted-foreground">{option.hint}</span>
-									</span>
-								</label>
-							{/each}
-						</fieldset>
+						<InputComp
+							{form}
+							{errors}
+							name="fulfilment"
+							type="imageSelect"
+							label={m.checkout_fulfilment_label()}
+							items={[
+								{
+									value: 'pickup',
+									name: m.checkout_pickup(),
+									description: m.checkout_pickup_hint()
+								},
+								{
+									value: 'delivery',
+									name: m.checkout_delivery(),
+									description: m.checkout_delivery_hint()
+								}
+							]}
+							required
+						/>
 
 						{#if delivering}
-							<!--
-								A native select, not the kit's `SelectComp`: on a phone it opens the system picker,
-								and the kit's list is portalled outside this modal sheet, where the dialog hides it
-								from screen readers.
-							-->
-							<div class="flex flex-col gap-2">
-								<label for="deliveryAreaId" class="text-sm font-medium"
-									>{m.checkout_delivery_area()}</label
-								>
-								<select
-									id="deliveryAreaId"
-									name="deliveryAreaId"
-									bind:value={$form.deliveryAreaId}
-									aria-invalid={areaError ? 'true' : undefined}
-									aria-describedby={areaError ? 'deliveryAreaId-error' : undefined}
-									class="h-11 w-full rounded-md border border-input bg-card px-3 text-base text-foreground aria-invalid:border-destructive"
-								>
-									<option value={undefined} disabled
-										>{m.checkout_delivery_area_placeholder()}</option
-									>
-									{#each areaItems as item (item.value)}
-										<option value={item.value}>{item.name}</option>
-									{/each}
-								</select>
-								{#if areaError}
-									<p id="deliveryAreaId-error" class="text-sm text-destructive" role="alert">
-										{areaError}
-									</p>
-								{/if}
-							</div>
+							<InputComp
+								{form}
+								{errors}
+								name="deliveryAreaId"
+								type="select"
+								label={m.checkout_delivery_area()}
+								items={areaItems}
+								required
+							/>
 							<InputComp
 								{form}
 								{errors}

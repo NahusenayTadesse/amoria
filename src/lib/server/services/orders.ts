@@ -6,10 +6,27 @@ import { notDeleted } from '@nahu/admin-kit/server/softDelete';
 import { WriteRefused } from '@nahu/admin-kit/server/childCrud';
 import { db } from '$lib/server/db';
 import { transaction } from '$lib/server/db/retry';
-import { bankAccount, orderItem, orders, payment, product } from '$lib/server/db/schema';
+import {
+	bankAccount,
+	bundle,
+	bundleItem,
+	orderItem,
+	orders,
+	payment,
+	product
+} from '$lib/server/db/schema';
 import { formatRef, publicToken } from '$lib/server/tokens';
 import { invalidate } from '$lib/server/cache';
-import { lineTotal, sumBirr } from '$lib/money';
+import { lineTotal, roundBirr, sumBirr } from '$lib/money';
+import {
+	bundlePrice,
+	checkBox,
+	splitBundlePrice,
+	type BoxProblem,
+	type BoxRule
+} from '$lib/bundle';
+import { localized } from '$lib/localized';
+import { boxItems, categoryPaths, containerRules } from './bundles';
 import { upsertGuest, type GuestDetails } from './customers';
 import { move, StockShortError } from './stock';
 import { getSettings } from './settings';
@@ -28,7 +45,14 @@ const PAID_STATUSES = ['paid', 'preparing', 'ready', 'completed', 'paid_unfulfil
 export const MAX_CART_LINES = 20;
 export const MAX_LINE_QTY = 20;
 
-export type CartLine = { productId: number; qty: number };
+/** A gift, or a bundle of gifts sold as one. */
+/**
+ * A gift, or a bundle sold as one. A build-your-own box carries what the customer put in it
+ * (`items`); a staff bundle carries none.
+ */
+export type CartLine =
+	| { productId: number; qty: number }
+	| { bundleId: number; qty: number; items?: { productId: number; qty: number }[] };
 
 export type Fulfilment =
 	| { type: 'pickup' }
@@ -55,27 +79,77 @@ export type NewOrder = {
  * short.
  */
 export async function createFromCart(input: NewOrder) {
-	const lines = mergeLines(input.lines);
-	if (!lines.length) throw new WriteRefused(null, m.refused_bag_empty());
-	if (lines.length > MAX_CART_LINES) throw new WriteRefused(null, m.refused_too_many());
+	const { products: productLines, bundles: bundleLines } = mergeLines(input.lines);
+	const lineCount = productLines.length + bundleLines.length;
+	if (!lineCount) throw new WriteRefused(null, m.refused_bag_empty());
+	if (lineCount > MAX_CART_LINES) throw new WriteRefused(null, m.refused_too_many());
 
 	const { holdMinutes } = await getSettings();
 
 	const created = await transaction(async (tx) => {
+		// A bundle's contents decide which gifts are locked below, so they are read first.
+		const bundleIds = [...new Set(bundleLines.map((line) => line.bundleId))];
+		const [bundles, contents] = bundleIds.length
+			? await Promise.all([
+					tx
+						.select({
+							id: bundle.id,
+							name: bundle.name,
+							type: bundle.type,
+							containerId: bundle.containerId,
+							discountPercent: bundle.discountPercent
+						})
+						.from(bundle)
+						.where(
+							and(
+								inArray(bundle.id, bundleIds),
+								eq(bundle.isActive, true),
+								isNotNull(bundle.publishedAt),
+								lte(bundle.publishedAt, sql`NOW()`),
+								notDeleted(bundle)
+							)
+						),
+					tx
+						.select({
+							bundleId: bundleItem.bundleId,
+							productId: bundleItem.productId,
+							qty: bundleItem.qty
+						})
+						.from(bundleItem)
+						.where(and(inArray(bundleItem.bundleId, bundleIds), notDeleted(bundleItem)))
+						.orderBy(asc(bundleItem.bundleId), asc(bundleItem.sortOrder), asc(bundleItem.id))
+				])
+			: [[], []];
+		const containerIds = bundles.flatMap((b) => (b.containerId ? [b.containerId] : []));
+		const [rules, paths] = containerIds.length
+			? await Promise.all([containerRules(containerIds), categoryPaths()])
+			: [new Map<number, BoxRule[]>(), new Map<number, number[]>()];
+
+		const productIds = [
+			...new Set([
+				...productLines.map((line) => line.productId),
+				...contents.map((part) => part.productId),
+				...containerIds,
+				...bundleLines.flatMap((line) => (line.items ?? []).map((item) => item.productId))
+			])
+		];
 		const products = await tx
-			.select({ id: product.id, name: product.name, price: product.price })
+			.select({
+				id: product.id,
+				name: product.name,
+				nameAm: product.nameAm,
+				price: product.price,
+				categoryId: product.categoryId,
+				// Sold by itself only when on the shop; inside a bundle, being for sale is enough.
+				onShop: sql<number>`(${product.publishedAt} IS NOT NULL AND ${product.publishedAt} <= NOW())`
+			})
 			.from(product)
 			.where(
 				and(
-					inArray(
-						product.id,
-						lines.map((line) => line.productId)
-					),
+					inArray(product.id, productIds),
 					eq(product.kind, 'gift'),
 					eq(product.isActive, true),
 					isNotNull(product.price),
-					isNotNull(product.publishedAt),
-					lte(product.publishedAt, sql`NOW()`),
 					notDeleted(product)
 				)
 			)
@@ -86,18 +160,77 @@ export async function createFromCart(input: NewOrder) {
 			.for('update');
 		const byId = new Map(products.map((p) => [p.id, p]));
 
-		const priced = lines.map((line) => {
+		const rows: (typeof orderItem.$inferInsert & { productId: number; qty: number })[] = [];
+
+		for (const line of productLines) {
 			const item = byId.get(line.productId);
-			if (!item) throw new WriteRefused(null, m.refused_gone());
-			return {
-				...line,
-				name: item.name,
+			if (!item || !Number(item.onShop)) throw new WriteRefused(null, m.refused_gone());
+			rows.push({
+				orderId: 0,
+				productId: line.productId,
+				nameSnapshot: item.name,
 				unitPrice: item.price!,
+				qty: line.qty,
 				lineTotal: lineTotal(item.price!, line.qty)
-			};
+			});
+		}
+
+		// A bundle is one row per gift in it (its container first), each carrying its share of the
+		// discounted price, so stock and sales by gift stay true. The rows of one line share the
+		// bundle's id, name and count, and the line's number.
+		bundleLines.forEach((line, index) => {
+			const row = bundles.find((b) => b.id === line.bundleId);
+			if (!row) throw new WriteRefused(null, m.refused_gone());
+			const isCustom = row.type === 'custom';
+			// A box is built from what the customer chose; a staff bundle from what staff put in it.
+			if (isCustom !== Boolean(line.items)) throw new WriteRefused(null, m.refused_gone());
+			const chosen = isCustom
+				? line.items!
+				: contents.filter((part) => part.bundleId === line.bundleId);
+			if (!chosen.length) throw new WriteRefused(null, m.refused_box_empty({ box: row.name }));
+
+			const parts = [
+				...(row.containerId ? [{ productId: row.containerId, qty: 1 }] : []),
+				...chosen
+			].map((part) => ({ ...part, item: byId.get(part.productId) }));
+			if (parts.some((part) => !part.item) || (isCustom && !row.containerId)) {
+				throw new WriteRefused(null, m.refused_gone());
+			}
+
+			if (row.containerId) {
+				const boxRules = rules.get(row.containerId) ?? [];
+				const items = boxItems(
+					chosen.map((part) => ({ ...part, categoryId: byId.get(part.productId)!.categoryId })),
+					paths
+				);
+				const [problem] = checkBox(boxRules, items);
+				if (problem) throw new WriteRefused(null, boxRefusal(problem, row.name, byId));
+			}
+
+			const priced = parts.map((part) => ({
+				qty: part.qty,
+				price: part.item!.price!,
+				stockQty: 0
+			}));
+			const shares = splitBundlePrice(priced, bundlePrice(priced, row.discountPercent));
+			parts.forEach((part, at) => {
+				rows.push({
+					orderId: 0,
+					productId: part.productId,
+					nameSnapshot: part.item!.name,
+					// For show: the share of one gift. The line total is the exact figure.
+					unitPrice: roundBirr(shares[at] / part.qty),
+					qty: part.qty * line.qty,
+					lineTotal: lineTotal(shares[at], line.qty),
+					bundleId: row.id,
+					bundleName: row.name,
+					bundleQty: line.qty,
+					bundleLine: index + 1
+				});
+			});
 		});
 
-		const subtotal = sumBirr(priced.map((line) => line.lineTotal));
+		const subtotal = sumBirr(rows.map((row) => row.lineTotal));
 		// The fee is decided here from the area's row and the free-delivery threshold, never taken
 		// from the form: the sheet's figure is a preview of this same rule (`$lib/delivery`).
 		const delivery =
@@ -133,36 +266,23 @@ export async function createFromCart(input: NewOrder) {
 			.set({ ref: formatRef('order', orderId) })
 			.where(eq(orders.id, orderId));
 
-		await tx.insert(orderItem).values(
-			priced.map((line) => ({
-				orderId,
-				productId: line.productId,
-				nameSnapshot: line.name,
-				unitPrice: line.unitPrice,
-				qty: line.qty,
-				lineTotal: line.lineTotal
-			}))
-		);
+		await tx.insert(orderItem).values(rows.map((row) => ({ ...row, orderId })));
 
-		// Ascending ids (see `mergeLines`), so concurrent checkouts lock rows in the same order.
-		for (const line of priced) {
+		// One move per gift, however many lines and bundles it is in, in ascending id order so
+		// concurrent checkouts lock rows in the same order.
+		const needed = new Map<number, number>();
+		for (const row of rows) needed.set(row.productId, (needed.get(row.productId) ?? 0) + row.qty);
+		for (const productId of [...needed.keys()].sort((a, b) => a - b)) {
 			try {
 				await move(tx, {
-					productId: line.productId,
-					delta: -line.qty,
+					productId,
+					delta: -needed.get(productId)!,
 					reason: 'sale',
 					refType: 'order',
 					refId: orderId
 				});
 			} catch (err) {
-				if (err instanceof StockShortError) {
-					throw new WriteRefused(
-						null,
-						err.available === 0
-							? m.refused_sold_out({ name: line.name })
-							: m.refused_short({ count: err.available, name: line.name })
-					);
-				}
+				if (err instanceof StockShortError) throw shortRefusal(rows, productId, err.available);
 				throw err;
 			}
 		}
@@ -179,14 +299,90 @@ export async function createFromCart(input: NewOrder) {
 	return created;
 }
 
-/** One line per product, quantities summed and capped, in ascending product order. */
-function mergeLines(lines: CartLine[]): CartLine[] {
+/**
+ * "Only 2 left of …", naming what the customer chose: the gift if it is in the bag by itself,
+ * otherwise the bundle it is in, counted in whole bundles.
+ */
+function shortRefusal(
+	rows: {
+		productId: number;
+		qty: number;
+		nameSnapshot: string;
+		bundleName?: string | null;
+		bundleQty?: number | null;
+	}[],
+	productId: number,
+	available: number
+) {
+	const own = rows.find((row) => row.productId === productId && !row.bundleName);
+	const inBundle = rows.find((row) => row.productId === productId && row.bundleName);
+	const name = own ? own.nameSnapshot : inBundle!.bundleName!;
+	const count = own ? available : Math.floor(available / (inBundle!.qty / inBundle!.bundleQty!));
+	return new WriteRefused(
+		null,
+		count === 0 ? m.refused_sold_out({ name }) : m.refused_short({ count, name })
+	);
+}
+
+/**
+ * Gifts one line each, staff bundles one line each, and built boxes one line per distinct set of
+ * contents: quantities summed and capped, in ascending id order.
+ */
+function mergeLines(lines: CartLine[]) {
+	const products = new Map<number, number>();
+	const bundles = new Map<
+		string,
+		{ bundleId: number; qty: number; items: { productId: number; qty: number }[] | null }
+	>();
+	for (const line of lines) {
+		if ('productId' in line) {
+			products.set(line.productId, (products.get(line.productId) ?? 0) + line.qty);
+			continue;
+		}
+		// The same gift twice in one box is one entry; the order of entries does not matter.
+		const items = line.items
+			? [...mergeQty(line.items.map((item) => [item.productId, item.qty])).entries()]
+					.map(([productId, qty]) => ({ productId, qty }))
+					.filter((item) => item.qty > 0)
+					.sort((a, b) => a.productId - b.productId)
+			: null;
+		const key = `${line.bundleId}:${items?.map((i) => `${i.productId}.${i.qty}`).join(',') ?? ''}`;
+		const found = bundles.get(key);
+		if (found) found.qty += line.qty;
+		else bundles.set(key, { bundleId: line.bundleId, qty: line.qty, items });
+	}
+	return {
+		products: [...products.entries()]
+			.map(([productId, qty]) => ({ productId, qty: Math.min(qty, MAX_LINE_QTY) }))
+			.filter((line) => line.qty > 0)
+			.sort((a, b) => a.productId - b.productId),
+		bundles: [...bundles.values()]
+			.map((line) => ({ ...line, qty: Math.min(line.qty, MAX_LINE_QTY) }))
+			.filter((line) => line.qty > 0)
+			.sort((a, b) => a.bundleId - b.bundleId)
+	};
+}
+
+function mergeQty(pairs: [number, number][]) {
 	const qty = new Map<number, number>();
-	for (const line of lines) qty.set(line.productId, (qty.get(line.productId) ?? 0) + line.qty);
-	return [...qty.entries()]
-		.map(([productId, total]) => ({ productId, qty: Math.min(total, MAX_LINE_QTY) }))
-		.filter((line) => line.qty > 0)
-		.sort((a, b) => a.productId - b.productId);
+	for (const [id, n] of pairs) qty.set(id, (qty.get(id) ?? 0) + n);
+	return qty;
+}
+
+/** A plain sentence for the first thing wrong with a box. */
+function boxRefusal(
+	problem: BoxProblem,
+	box: string,
+	products: Map<number, { name: string; nameAm: string | null }>
+) {
+	if (problem.kind === 'not_allowed') {
+		const gift = products.get(problem.productId);
+		return m.refused_box_not_allowed({ name: gift ? localized(gift, 'name') : '', box });
+	}
+	const group = localized(problem.rule, 'name');
+	return problem.kind === 'too_many'
+		? m.refused_box_too_many({ box, max: problem.rule.maxQty, group })
+		: m.refused_box_too_few({ box, min: problem.rule.minQty, group });
 }
 
 /** Gives an order's stock back: one `sale_cancel` per line. */
@@ -438,7 +634,10 @@ export async function orderByToken(token: string) {
 				name: orderItem.nameSnapshot,
 				qty: orderItem.qty,
 				unitPrice: orderItem.unitPrice,
-				lineTotal: orderItem.lineTotal
+				lineTotal: orderItem.lineTotal,
+				bundleId: orderItem.bundleId,
+				bundleName: orderItem.bundleName,
+				bundleQty: orderItem.bundleQty
 			})
 			.from(orderItem)
 			.where(eq(orderItem.orderId, row.id))

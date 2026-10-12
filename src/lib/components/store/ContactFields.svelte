@@ -9,9 +9,12 @@
 		errors: ComponentProps<typeof InputComp>['errors'];
 		/** What we do with the number, in the words of the page (an order, a course…). */
 		phoneHint?: string;
+		/** Prefixes the fields' ids, for a page with two contact forms (book and ask). */
+		idPrefix?: string;
 	};
 
-	let { form, errors, phoneHint }: Props = $props();
+	let { form, errors, phoneHint, idPrefix }: Props = $props();
+	const id = (name: string) => (idPrefix ? `${idPrefix}-${name}` : undefined);
 
 	/**
 	 * The kit's input does not pass `autocomplete` or `inputmode` through, so they are set here: a
@@ -32,16 +35,24 @@
 
 <!-- Name and phone, then an optional email: everything a guest is asked before paying (§12.3). -->
 <div class="contents" use:hints>
-	<InputComp {form} {errors} name="name" label={m.checkout_name()} required />
+	<InputComp {form} {errors} name="name" id={id('name')} label={m.checkout_name()} required />
 	<InputComp
 		{form}
 		{errors}
 		name="phone"
+		id={id('phone')}
 		type="tel"
 		label={m.checkout_phone()}
 		placeholder="0911 234 567"
 		description={phoneHint ?? m.checkout_phone_hint()}
 		required
 	/>
-	<InputComp {form} {errors} name="email" type="email" label={m.checkout_email()} />
+	<InputComp
+		{form}
+		{errors}
+		name="email"
+		id={id('email')}
+		type="email"
+		label={m.checkout_email()}
+	/>
 </div>

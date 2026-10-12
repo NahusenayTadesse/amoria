@@ -27,7 +27,7 @@ const MAX_PAGES = 30;
 const PAGE_WAIT_MS = 4000;
 
 /** Fetched when the worker installs, so they are there offline before the visitor opens them. */
-const WARM_PAGES = ['/', '/shop', '/school', '/about', '/contact', '/decor/quote'];
+const WARM_PAGES = ['/', '/shop', '/school', '/about', '/contact', '/decor/quote', '/spaces'];
 
 const shell = [
 	...build,
@@ -35,7 +35,7 @@ const shell = [
 ];
 
 /** Pages worth keeping for offline: public, the same for everyone. `/am/…` is the Amharic copy. */
-const CACHEABLE_PAGE = /^(\/am)?(\/(shop|school|about|contact|decor)(\/.*)?)?\/?$/;
+const CACHEABLE_PAGE = /^(\/am)?(\/(shop|school|spaces|about|contact|decor)(\/.*)?)?\/?$/;
 /** Never answered from a cache. */
 const NETWORK_ONLY =
 	/^(\/am)?\/(dashboard|api|login|logout|setup|pay|o|reg|buy)(\/|$)|\/__data\.json$/;

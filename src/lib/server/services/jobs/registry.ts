@@ -2,6 +2,7 @@ import { expireHolds } from '../orders';
 import { expireRegistrations } from '../school';
 import { reconcileStale } from '../payments';
 import { sendClassReminders } from '../push';
+import { expireRenterOrders } from '../renterOrders';
 
 export type Job = {
 	name: string;
@@ -21,7 +22,8 @@ export const JOBS: Job[] = [
 		timeoutSeconds: 120,
 		run: async () => ({
 			orders: await expireHolds(),
-			registrations: await expireRegistrations()
+			registrations: await expireRegistrations(),
+			marketplace: await expireRenterOrders()
 		})
 	},
 	{

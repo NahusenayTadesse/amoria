@@ -2,13 +2,20 @@ import { redirect } from '@sveltejs/kit';
 import { message, superValidate } from 'sveltekit-superforms';
 import { zod4 } from 'sveltekit-superforms/adapters';
 import { auth } from '$lib/server/auth';
-import { isStaff } from '$lib/server/staff';
+import { isRenterUser, isStaff } from '$lib/server/staff';
+import { db } from '$lib/server/db';
+import { user } from '$lib/server/db/schema';
+import { eq } from 'drizzle-orm';
 import { takeToken } from '$lib/server/rateLimit';
 import { loginSchema } from '$lib/schemas/auth';
 
-/** Staff sign-in (stock management's page). Customers have no accounts yet (§14). */
+/**
+ * Sign-in for staff and for renters (§5.12), who each land on their own dashboard. Customers have
+ * no accounts yet (§14).
+ */
 export const load = async ({ locals }) => {
 	if (isStaff(locals.user)) redirect(302, '/dashboard');
+	if (isRenterUser(locals.user)) redirect(302, '/renter');
 	return { form: await superValidate(zod4(loginSchema)) };
 };
 
@@ -46,6 +53,11 @@ export const actions = {
 
 		// Same-origin paths only: `//evil.com` and `/\evil.com` both start with a slash.
 		const redirectTo = url.searchParams.get('redirectTo');
-		redirect(303, redirectTo && /^\/(?![/\\])/.test(redirectTo) ? redirectTo : '/dashboard');
+		if (redirectTo && /^\/(?![/\\])/.test(redirectTo)) redirect(303, redirectTo);
+		const [who] = await db
+			.select({ role: user.role })
+			.from(user)
+			.where(eq(user.email, form.data.email.trim().toLowerCase()));
+		redirect(303, who?.role === 'renter' ? '/renter' : '/dashboard');
 	}
 };
