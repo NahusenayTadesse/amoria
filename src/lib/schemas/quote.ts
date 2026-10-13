@@ -37,3 +37,33 @@ export const quoteRequestSchema = z.object({
 });
 
 export type QuoteRequestInput = z.output<typeof quoteRequestSchema>;
+
+const eventDateField = quoteRequestSchema.shape.eventDate;
+
+/**
+ * Booking a rental space from its page (`/spaces/[slug]`). The space comes from the page, not the
+ * form. Saved as a `quote_request` of kind `space`, so staff answer it from the same inbox.
+ */
+export const spaceBookingSchema = z.object({
+	...contactFields,
+	eventDate: eventDateField,
+	guestCount: optionalNumber(z.coerce.number().int().min(1).max(100_000)),
+	eventTypeId: optionalNumber(z.coerce.number().int().positive()),
+	message: z.string().trim().max(1500).default(''),
+	preferredChannel: z.enum(CONTACT_CHANNELS).default('phone')
+});
+
+export type SpaceBookingInput = z.output<typeof spaceBookingSchema>;
+
+/** A note from `/contact`: who they are and what they want to say. Kind `contact`. */
+export const contactMessageSchema = z.object({
+	...contactFields,
+	message: z
+		.string()
+		.trim()
+		.min(5, { error: () => m.contact_form_message_required() })
+		.max(1500),
+	preferredChannel: z.enum(CONTACT_CHANNELS).default('phone')
+});
+
+export type ContactMessageInput = z.output<typeof contactMessageSchema>;

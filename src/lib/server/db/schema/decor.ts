@@ -13,12 +13,14 @@ import {
 import {
 	CONTACT_CHANNELS,
 	PACKAGE_TIERS,
+	QUOTE_REQUEST_KINDS,
 	QUOTE_REQUEST_STATUSES,
 	QUOTE_STATUSES
 } from '../../../constants';
 import { user } from './auth';
 import { customer } from './customers';
 import { trafficSource } from './attribution';
+import { rentalSpace } from './spaces';
 import { birr, contactSnapshot, jsonText, publicRecord, timestamps } from './columns';
 import { deletionFields, lesserFields, secureFields } from './secureFields';
 
@@ -111,16 +113,21 @@ export const portfolioImage = mysqlTable(
 	(table) => [index('portfolio_image_owner_idx').on(table.portfolioItemId, table.sortOrder)]
 );
 
-/** What a customer submits from `/decor/quote`, or staff enter from a chat. */
+/**
+ * What a customer submits from `/decor/quote`, a space's booking form or `/contact`, or staff
+ * enter from a chat. `kind` says which; `spaceId` is the space asked for.
+ */
 export const quoteRequest = mysqlTable(
 	'quote_request',
 	{
 		id: int('id').autoincrement().primaryKey(),
 		publicToken: varchar('public_token', { length: 32 }).notNull().unique(),
+		kind: mysqlEnum('kind', QUOTE_REQUEST_KINDS).notNull().default('decor'),
 		customerId: int('customer_id')
 			.notNull()
 			.references(() => customer.id, { onDelete: 'restrict' }),
 		...contactSnapshot(),
+		spaceId: int('space_id').references(() => rentalSpace.id, { onDelete: 'restrict' }),
 		eventTypeId: int('event_type_id').references(() => eventType.id, { onDelete: 'restrict' }),
 		eventDate: date('event_date', { mode: 'string' }),
 		venue: varchar('venue', { length: 160 }),
@@ -144,6 +151,7 @@ export const quoteRequest = mysqlTable(
 	},
 	(table) => [
 		index('quote_request_status_idx').on(table.status, table.createdAt),
+		index('quote_request_kind_idx').on(table.kind, table.createdAt),
 		index('quote_request_customer_idx').on(table.customerId)
 	]
 );

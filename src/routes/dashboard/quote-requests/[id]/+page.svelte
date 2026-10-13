@@ -12,7 +12,11 @@
 	import { formatETB } from '@nahu/admin-kit/global';
 	import { ethiopianDateTime } from '@nahu/admin-kit/tableCells';
 	import { QUOTE_REQUEST_STATUSES } from '$lib/constants';
-	import { CHANNEL_LABELS, QUOTE_REQUEST_LABELS } from '$lib/quoteRequestStatus';
+	import {
+		CHANNEL_LABELS,
+		QUOTE_REQUEST_KIND_LABELS,
+		QUOTE_REQUEST_LABELS
+	} from '$lib/quoteRequestStatus';
 
 	let { data, form } = $props();
 
@@ -21,6 +25,7 @@
 
 	const details = $derived(
 		[
+			['Space', data.spaceName],
 			['Event', data.eventName],
 			['Date', request.eventDate],
 			['Where', request.venue],
@@ -34,7 +39,7 @@
 </script>
 
 <svelte:head>
-	<title>Quote request from {request.contactName} | Amoria</title>
+	<title>{QUOTE_REQUEST_KIND_LABELS[request.kind]} from {request.contactName} | Amoria</title>
 </svelte:head>
 
 <div class="flex max-w-3xl flex-col gap-4">
@@ -46,6 +51,9 @@
 	<div class="flex flex-wrap items-center gap-3">
 		<h1 class="text-2xl font-semibold">{request.contactName}</h1>
 		<Statuses status={request.status} label={QUOTE_REQUEST_LABELS[request.status]} />
+		<span class="rounded-full bg-muted px-2.5 py-0.5 text-xs font-medium"
+			>{QUOTE_REQUEST_KIND_LABELS[request.kind]}</span
+		>
 	</div>
 	<p class="text-sm text-muted-foreground">
 		Received {ethiopianDateTime(request.createdAt)}
@@ -77,7 +85,10 @@
 	</Card.Root>
 
 	<Card.Root>
-		<Card.Header><Card.Title>The event</Card.Title></Card.Header>
+		<Card.Header
+			><Card.Title>{request.kind === 'contact' ? 'Their message' : 'The event'}</Card.Title
+			></Card.Header
+		>
 		<Card.Content>
 			{#if details.length}
 				<dl class="grid gap-x-6 gap-y-3 sm:grid-cols-2">

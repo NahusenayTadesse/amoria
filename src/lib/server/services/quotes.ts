@@ -1,4 +1,4 @@
-import { and, asc, eq } from 'drizzle-orm';
+import { and, asc, eq, inArray } from 'drizzle-orm';
 import { notDeleted } from '@nahu/admin-kit/server/softDelete';
 import { insertReturningId } from '@nahu/admin-kit/server/db/insert';
 import { WriteRefused } from '@nahu/admin-kit/server/childCrud';
@@ -6,15 +6,19 @@ import { recordAudit } from '@nahu/admin-kit/server/audit';
 import { localToday } from '@nahu/admin-kit/time';
 import { db } from '$lib/server/db';
 import { transaction } from '$lib/server/db/retry';
-import { decorPackage, eventType, quoteRequest } from '$lib/server/db/schema';
+import { decorPackage, eventType, packageImage, quoteRequest } from '$lib/server/db/schema';
 import { publicToken } from '$lib/server/tokens';
 import { cached } from '$lib/server/cache';
-import type { QUOTE_REQUEST_STATUSES } from '$lib/constants';
+import type { QUOTE_REQUEST_KINDS, QUOTE_REQUEST_STATUSES } from '$lib/constants';
 import { upsertGuest, type GuestDetails } from './customers';
 import type { Actor } from './payments/payable';
 import type { QuoteRequestInput } from '$lib/schemas/quote';
 
 export type QuoteRequestStatus = (typeof QUOTE_REQUEST_STATUSES)[number];
+export type QuoteRequestKind = (typeof QUOTE_REQUEST_KINDS)[number];
+
+/** A request's fields; the space booking and contact forms send only some of them. */
+type RequestFields = Partial<QuoteRequestInput> & Pick<QuoteRequestInput, 'preferredChannel'>;
 
 /** What the "Plan your décor" form offers to choose from: event types and the packages on sale. */
 export function quoteFormOptions() {
@@ -36,24 +40,51 @@ export function quoteFormOptions() {
 					slug: decorPackage.slug,
 					name: decorPackage.name,
 					nameAm: decorPackage.nameAm,
-					eventTypeId: decorPackage.eventTypeId
+					eventTypeId: decorPackage.eventTypeId,
+					startingPrice: decorPackage.startingPrice
 				})
 				.from(decorPackage)
 				.where(and(eq(decorPackage.isActive, true), notDeleted(decorPackage)))
 				.orderBy(asc(decorPackage.sortOrder), asc(decorPackage.name))
 		]);
-		return { events, packages };
+
+		// Each package's first photo, for the picture picker.
+		const images = packages.length
+			? await db
+					.select({ packageId: packageImage.packageId, fileName: packageImage.fileName })
+					.from(packageImage)
+					.where(
+						and(
+							inArray(
+								packageImage.packageId,
+								packages.map((pack) => pack.id)
+							),
+							notDeleted(packageImage)
+						)
+					)
+					.orderBy(asc(packageImage.packageId), asc(packageImage.sortOrder), asc(packageImage.id))
+			: [];
+		const first = new Map<number, string>();
+		for (const image of images)
+			if (!first.has(image.packageId)) first.set(image.packageId, image.fileName);
+
+		return {
+			events,
+			packages: packages.map((pack) => ({ ...pack, image: first.get(pack.id) ?? null }))
+		};
 	});
 }
 
 /**
- * Saves a customer's request for a quote. A request with a `clientRef` already saved is returned
- * as it is rather than saved again, so a request queued offline and sent twice is one request.
+ * Saves a customer's request: for décor (the default), to book a space (`about.spaceId`), or a
+ * note from the contact page. A request with a `clientRef` already saved is returned as it is
+ * rather than saved again, so a request queued offline and sent twice is one request.
  * `contact.phone` is already normalised.
  */
 export async function createQuoteRequest(
-	input: QuoteRequestInput,
-	contact: GuestDetails
+	input: RequestFields,
+	contact: GuestDetails,
+	about: { kind: QuoteRequestKind; spaceId?: number } = { kind: 'decor' }
 ): Promise<{ id: number; token: string; duplicate: boolean }> {
 	if (input.eventDate && input.eventDate < localToday()) {
 		throw new WriteRefused('eventDate', 'That date has already passed.');
@@ -73,6 +104,8 @@ export async function createQuoteRequest(
 		const token = publicToken();
 		const id = await insertReturningId(tx, quoteRequest, {
 			publicToken: token,
+			kind: about.kind,
+			spaceId: about.spaceId ?? null,
 			customerId,
 			contactName: contact.name,
 			contactPhone: contact.phone,

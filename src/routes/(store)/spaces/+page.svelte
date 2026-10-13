@@ -13,7 +13,7 @@
 	let { data } = $props();
 
 	const ask = $derived(chatHref(data.contact, m.chat_spaces()));
-	const contact = $derived(resolve(localizeHref('/contact') as AppPath));
+	const contact = $derived(`${resolve(localizeHref('/contact') as AppPath)}#message`);
 </script>
 
 <!-- eslint-disable svelte/no-navigation-without-resolve -- an external chat link and #anchors -->

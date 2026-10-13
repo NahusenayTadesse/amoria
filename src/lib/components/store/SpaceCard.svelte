@@ -1,6 +1,7 @@
 <script lang="ts">
 	import ArrowRight from '@lucide/svelte/icons/arrow-right';
 	import Building2 from '@lucide/svelte/icons/building-2';
+	import CalendarCheck from '@lucide/svelte/icons/calendar-check';
 	import Images from '@lucide/svelte/icons/images';
 	import Play from '@lucide/svelte/icons/play';
 	import Users from '@lucide/svelte/icons/users';
@@ -15,6 +16,7 @@
 	type Props = { space: SpaceCard; eager?: boolean };
 	let { space, eager = false }: Props = $props();
 
+	const href = $derived(resolve(localizeHref(`/spaces/${space.slug}`) as AppPath));
 	const name = $derived(localized(space, 'name'));
 	const summary = $derived(localized(space, 'summary'));
 	const unit = $derived(localized(space, 'priceUnit'));
@@ -25,6 +27,7 @@
 	);
 </script>
 
+<!-- eslint-disable svelte/no-navigation-without-resolve -- `href` is resolved; `#book` is its form -->
 <article
 	class="space group relative flex h-full flex-col overflow-hidden rounded-[1.75rem] border border-border bg-card transition-[transform,box-shadow] duration-500 hover:-translate-y-1.5 hover:shadow-[0_32px_60px_-34px_var(--am-ink)]"
 >
@@ -66,11 +69,8 @@
 
 	<div class="flex flex-1 flex-col p-6">
 		<h3 class="display text-2xl leading-tight font-bold">
-			<!-- The whole card is the link. -->
-			<a
-				href={resolve(localizeHref(`/spaces/${space.slug}`) as AppPath)}
-				class="after:absolute after:inset-0 after:content-['']"
-			>
+			<!-- The whole card opens the space; the buttons below take the keyboard. -->
+			<a {href} tabindex="-1" class="after:absolute after:inset-0 after:content-['']">
 				{name}
 			</a>
 		</h3>
@@ -96,15 +96,26 @@
 				</span>
 			{/if}
 		</div>
-		<span
-			class="mt-4 inline-flex h-11 items-center gap-1.5 text-sm font-semibold text-foreground transition-colors group-hover:text-[var(--am-ribbon)]"
-		>
-			{m.spaces_view()}
-			<ArrowRight
-				class="h-4 w-4 transition-transform duration-300 group-hover:translate-x-1.5"
-				aria-hidden="true"
-			/>
-		</span>
+		<!-- Above the card's own link, so each goes where it says. -->
+		<div class="relative z-10 mt-5 flex flex-col gap-2">
+			<a
+				{href}
+				class="group/see inline-flex h-11 items-center justify-center gap-1.5 rounded-full border border-foreground/25 px-4 text-sm font-semibold transition-colors hover:border-foreground"
+			>
+				{m.spaces_view()}
+				<ArrowRight
+					class="h-4 w-4 transition-transform duration-300 group-hover/see:translate-x-1"
+					aria-hidden="true"
+				/>
+			</a>
+			<a
+				href={`${href}#book`}
+				class="btn-shine inline-flex h-11 items-center justify-center gap-1.5 rounded-full bg-[var(--am-ribbon)] px-4 text-sm font-semibold text-white transition-transform duration-300 hover:-translate-y-0.5"
+			>
+				<CalendarCheck class="h-4 w-4" aria-hidden="true" />
+				{m.spaces_card_book()}
+			</a>
+		</div>
 	</div>
 </article>
 

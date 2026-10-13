@@ -1,9 +1,9 @@
-import { error, fail } from '@sveltejs/kit';
+import { error, fail, redirect } from '@sveltejs/kit';
 import { eq } from 'drizzle-orm';
 import { requirePermission } from '@nahu/admin-kit/server/permissions';
 import { WriteRefused } from '@nahu/admin-kit/server/childCrud';
 import { db } from '$lib/server/db';
-import { decorPackage, eventType, quoteRequest, user } from '$lib/server/db/schema';
+import { decorPackage, eventType, quoteRequest, rentalSpace, user } from '$lib/server/db/schema';
 import { setQuoteRequestStatus } from '$lib/server/services/quotes';
 import { actorOf } from '$lib/server/paymentAdmin';
 import { QUOTE_REQUEST_STATUSES } from '$lib/constants';
@@ -21,14 +21,17 @@ export const load = async ({ params }) => {
 			request: quoteRequest,
 			eventName: eventType.name,
 			packageName: decorPackage.name,
+			spaceName: rentalSpace.name,
 			assigneeName: user.name
 		})
 		.from(quoteRequest)
 		.leftJoin(eventType, eq(eventType.id, quoteRequest.eventTypeId))
 		.leftJoin(decorPackage, eq(decorPackage.id, quoteRequest.packageId))
+		.leftJoin(rentalSpace, eq(rentalSpace.id, quoteRequest.spaceId))
 		.leftJoin(user, eq(user.id, quoteRequest.assignedTo))
 		.where(eq(quoteRequest.id, id));
 	if (!row) error(404, 'Request not found');
+	if (row.request.kind === 'contact') redirect(303, `/dashboard/messages/${id}`);
 	return row;
 };
 

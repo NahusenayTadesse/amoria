@@ -4,7 +4,9 @@ import Statuses from '@nahu/admin-kit/components/Table/statuses.svelte';
 import { ethiopianDateTime } from '@nahu/admin-kit/tableCells';
 import {
 	CHANNEL_LABELS,
+	QUOTE_REQUEST_KIND_LABELS,
 	QUOTE_REQUEST_LABELS,
+	type QuoteRequestKind,
 	type QuoteRequestStatus
 } from '$lib/quoteRequestStatus';
 import QuoteRequestLink from './QuoteRequestLink.svelte';
@@ -14,6 +16,8 @@ export type QuoteRequestRow = {
 	createdAt: Date;
 	contactName: string;
 	contactPhone: string;
+	kind: QuoteRequestKind;
+	spaceName: string | null;
 	eventName: string | null;
 	eventDate: string | null;
 	guestCount: number | null;
@@ -35,6 +39,14 @@ export const columns: ColumnDef<QuoteRequestRow>[] = [
 		accessorKey: 'contactName',
 		header: 'Customer',
 		cell: ({ row }) => `${row.original.contactName}, ${row.original.contactPhone}`
+	},
+	{
+		accessorKey: 'kind',
+		header: 'For',
+		cell: ({ row }) =>
+			row.original.kind === 'space' && row.original.spaceName
+				? `${QUOTE_REQUEST_KIND_LABELS.space}: ${row.original.spaceName}`
+				: QUOTE_REQUEST_KIND_LABELS[row.original.kind]
 	},
 	{
 		accessorKey: 'eventName',

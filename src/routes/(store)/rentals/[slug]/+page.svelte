@@ -1,7 +1,9 @@
 <script lang="ts">
 	import ArrowLeft from '@lucide/svelte/icons/arrow-left';
 	import ArrowRight from '@lucide/svelte/icons/arrow-right';
+	import CalendarCheck from '@lucide/svelte/icons/calendar-check';
 	import Check from '@lucide/svelte/icons/check';
+	import MessageCircle from '@lucide/svelte/icons/message-circle';
 	import Package from '@lucide/svelte/icons/package';
 	import Truck from '@lucide/svelte/icons/truck';
 	import Users from '@lucide/svelte/icons/users';
@@ -12,7 +14,6 @@
 	import { publicFileUrl } from '@nahu/admin-kit/files';
 	import { setKitLabels } from '@nahu/admin-kit/labels';
 	import YouTubeEmbed from '@nahu/admin-kit/components/YouTubeEmbed.svelte';
-	import * as Tabs from '@nahu/admin-kit/components/ui/tabs/index.js';
 	import { m } from '$lib/paraglide/messages.js';
 	import { getLocale, localizeHref } from '$lib/paraglide/runtime';
 	import { birr, localized } from '$lib/localized';
@@ -56,6 +57,13 @@
 	);
 	const cover = $derived(images[0]);
 	const path = (to: string) => resolve(localizeHref(to) as AppPath);
+
+	/** "Book now" or "Ask for a quote": one form for both, so switching keeps what was typed. */
+	let orderKind = $state<'book' | 'ask'>('book');
+	const orderKinds = [
+		{ value: 'book', label: m.market_book_now, Icon: CalendarCheck },
+		{ value: 'ask', label: m.market_ask_quote, Icon: MessageCircle }
+	] as const;
 
 	const metaDescription = $derived(
 		summary || m.rent_meta_description({ name, renter: renterName })
@@ -281,29 +289,48 @@
 			</p>
 			<div class="mt-8 max-w-2xl">
 				{#if data.canBook && listing.price != null}
-					<Tabs.Root value="book">
-						<Tabs.List class="mb-6 w-full">
-							<Tabs.Trigger value="book" class="flex-1">{m.market_book_now()}</Tabs.Trigger>
-							<Tabs.Trigger value="ask" class="flex-1">{m.market_ask_quote()}</Tabs.Trigger>
-						</Tabs.List>
-						<Tabs.Content value="book">
-							<RentalOrderForm
-								data={data.bookForm}
-								kind="book"
-								priced={{
+					<div
+						role="radiogroup"
+						aria-label={m.rent_order_heading()}
+						class="mb-6 grid grid-cols-2 gap-3"
+					>
+						{#each orderKinds as option (option.value)}
+							{@const on = orderKind === option.value}
+							<button
+								type="button"
+								role="radio"
+								aria-checked={on}
+								onclick={() => (orderKind = option.value)}
+								class={[
+									'inline-flex h-13 items-center justify-center gap-2 rounded-full border-2 px-4 text-sm font-semibold transition-[background-color,border-color,color,box-shadow] duration-300 focus-visible:ring-[3px] focus-visible:ring-ring/50 focus-visible:outline-none',
+									on
+										? 'border-[var(--am-ribbon)] bg-[var(--am-ribbon)] text-white shadow-[0_14px_34px_-18px_var(--am-ribbon)]'
+										: 'border-border bg-card text-muted-foreground hover:border-[var(--am-ribbon)]/60 hover:text-foreground'
+								]}
+							>
+								{#if on}
+									<Check class="h-4 w-4" aria-hidden="true" />
+								{:else}
+									<option.Icon class="h-4 w-4" aria-hidden="true" />
+								{/if}
+								{option.label()}
+							</button>
+						{/each}
+					</div>
+					<RentalOrderForm
+						data={data.bookForm}
+						kind={orderKind}
+						priced={orderKind === 'book'
+							? {
 									price: listing.price,
 									unit: listing.priceUnit,
 									deposit: listing.deposit,
 									quantity: listing.quantity
-								}}
-								maxQty={listing.quantity}
-								hourly={listing.priceUnit === 'hour'}
-							/>
-						</Tabs.Content>
-						<Tabs.Content value="ask">
-							<RentalOrderForm data={data.askForm} kind="ask" maxQty={listing.quantity} />
-						</Tabs.Content>
-					</Tabs.Root>
+								}
+							: null}
+						maxQty={listing.quantity}
+						hourly={listing.priceUnit === 'hour'}
+					/>
 				{:else}
 					<RentalOrderForm
 						data={data.askForm}

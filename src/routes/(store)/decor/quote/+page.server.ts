@@ -23,9 +23,12 @@ export const load = async ({ url }) => {
 	);
 
 	const pack = options.packages.find((p) => p.slug === url.searchParams.get('package'));
+	const kind = options.events.find((e) => e.slug === url.searchParams.get('type'));
 	if (pack) {
 		form.data.packageId = pack.id;
 		form.data.eventTypeId = pack.eventTypeId;
+	} else if (kind) {
+		form.data.eventTypeId = kind.id;
 	}
 	return { form, ...options };
 };

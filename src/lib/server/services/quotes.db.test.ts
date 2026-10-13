@@ -2,8 +2,13 @@ import { beforeEach, describe, expect, it } from 'vitest';
 import { eq } from 'drizzle-orm';
 import { WriteRefused } from '@nahu/admin-kit/server/childCrud';
 import { db } from '$lib/server/db';
-import { auditLog, customer, quoteRequest } from '$lib/server/db/schema';
-import { quoteRequestSchema, type QuoteRequestInput } from '$lib/schemas/quote';
+import { auditLog, customer, quoteRequest, rentalSpace } from '$lib/server/db/schema';
+import {
+	contactMessageSchema,
+	quoteRequestSchema,
+	spaceBookingSchema,
+	type QuoteRequestInput
+} from '$lib/schemas/quote';
 import { actorFor, dayFromNow, makeStaff, resetDb } from '$lib/server/testing/db';
 import { createQuoteRequest, setQuoteRequestStatus } from './quotes';
 
@@ -74,6 +79,57 @@ describe('createQuoteRequest', () => {
 			createQuoteRequest(input({ eventDate: dayFromNow(-3) }), contact)
 		).rejects.toBeInstanceOf(WriteRefused);
 		expect(await db.select().from(quoteRequest)).toHaveLength(0);
+	});
+});
+
+describe('space bookings and contact messages', () => {
+	it('saves a space booking against its space', async () => {
+		await db.insert(rentalSpace).values({ slug: 'garden', name: 'The Garden' });
+		const [space] = await db.select({ id: rentalSpace.id }).from(rentalSpace);
+		const booking = spaceBookingSchema.parse({
+			name: 'Selam',
+			phone: '0911234567',
+			eventDate: dayFromNow(20),
+			guestCount: '150',
+			eventTypeId: ''
+		});
+		const made = await createQuoteRequest({ ...booking, venue: 'The Garden' }, contact, {
+			kind: 'space',
+			spaceId: space.id
+		});
+
+		const [row] = await db.select().from(quoteRequest).where(eq(quoteRequest.id, made.id));
+		expect(row).toMatchObject({
+			kind: 'space',
+			spaceId: space.id,
+			guestCount: 150,
+			venue: 'The Garden',
+			eventTypeId: null
+		});
+	});
+
+	it('saves a contact message, and a décor request stays décor', async () => {
+		const note = contactMessageSchema.parse({
+			name: 'Selam',
+			phone: '0911234567',
+			message: 'Do you deliver to Bishoftu?'
+		});
+		const made = await createQuoteRequest(note, contact, { kind: 'contact' });
+		const decor = await createQuoteRequest(input(), contact);
+
+		const rows = await db.select().from(quoteRequest);
+		expect(rows.find((r) => r.id === made.id)).toMatchObject({
+			kind: 'contact',
+			spaceId: null,
+			message: 'Do you deliver to Bishoftu?'
+		});
+		expect(rows.find((r) => r.id === decor.id)?.kind).toBe('decor');
+	});
+
+	it('a contact message needs a few words', () => {
+		expect(
+			contactMessageSchema.safeParse({ name: 'Selam', phone: '0911234567', message: 'hi' }).success
+		).toBe(false);
 	});
 });
 

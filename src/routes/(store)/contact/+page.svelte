@@ -11,6 +11,13 @@
 	import type { AppPath } from '$lib/paths';
 	import { localizeHref } from '$lib/paraglide/runtime';
 	import Send from '@lucide/svelte/icons/send';
+	import CircleCheck from '@lucide/svelte/icons/circle-check';
+	import PenLine from '@lucide/svelte/icons/pen-line';
+	import InputComp from '@nahu/admin-kit/formComponents/InputComp.svelte';
+	import { createForm } from '@nahu/admin-kit/forms/createForm';
+	import { contactMessageSchema } from '$lib/schemas/quote';
+	import ContactFields from '$lib/components/store/ContactFields.svelte';
+	import ChannelPicker from '$lib/components/store/ChannelPicker.svelte';
 	import { m } from '$lib/paraglide/messages.js';
 	import { reveal } from '$lib/actions/reveal';
 	import { spotlight } from '$lib/actions/spotlight';
@@ -19,6 +26,16 @@
 	import PhotoArt from '$lib/components/store/PhotoArt.svelte';
 
 	let { data } = $props();
+
+	let sent = $state(false);
+
+	// Set up once from the page's initial form; superforms keeps it in step after that.
+	// svelte-ignore state_referenced_locally
+	const { form, errors, enhance, delayed } = createForm(data.form, contactMessageSchema, {
+		onUpdated({ form }) {
+			if (form.message?.type === 'success') sent = true;
+		}
+	});
 
 	const c = $derived(data.contact);
 	const text = $derived(m.chat_general());
@@ -34,8 +51,14 @@
 
 	// Only the ways that are set up in Settings; a card with nowhere to go is not shown.
 	const ways = $derived.by(() => {
-		// The form always works, even when no chat handle or phone is set up yet.
+		// The forms always work, even when no chat handle or phone is set up yet.
 		const list: Way[] = [
+			{
+				icon: PenLine,
+				title: m.contact_form_card(),
+				hint: m.contact_form_card_hint(),
+				href: '#message'
+			},
 			{
 				icon: ClipboardList,
 				title: m.quote_cta(),
@@ -109,7 +132,7 @@
 	const ldTag = $derived(`<script type="application/ld+json">${jsonLd}<${'/'}script>`);
 </script>
 
-<!-- eslint-disable svelte/no-navigation-without-resolve -- chat, phone, mail and map links are not app routes -->
+<!-- eslint-disable svelte/no-navigation-without-resolve -- chat, phone, mail and map links and #message are not app routes -->
 <svelte:head>
 	<title>{m.contact_meta_title()}</title>
 	<meta name="description" content={m.contact_meta_description()} />
@@ -213,6 +236,80 @@
 				</a>
 			{/if}
 		</div>
+	</div>
+</section>
+
+<!-- Write to us -->
+<section
+	id="message"
+	class="mx-auto grid max-w-6xl scroll-mt-24 gap-10 px-4 pb-20 sm:px-8 sm:pb-28 lg:grid-cols-[0.8fr_1.2fr] lg:gap-14"
+	aria-labelledby="message-heading"
+>
+	<div use:reveal>
+		<p class="text-xs font-semibold tracking-[0.22em] text-[var(--am-ribbon)] uppercase">
+			{m.contact_form_kicker()}
+		</p>
+		<h2 id="message-heading" class="display mt-3 text-3xl leading-[1.08] font-bold sm:text-4xl">
+			{m.contact_form_heading()}
+		</h2>
+		<p class="mt-5 max-w-[46ch] text-base text-muted-foreground sm:text-lg">
+			{m.contact_form_lede()}
+		</p>
+	</div>
+
+	<div use:reveal>
+		{#if sent}
+			<div
+				class="rounded-[1.5rem] border border-border bg-card p-7 text-center sm:p-10"
+				role="status"
+			>
+				<CircleCheck class="mx-auto h-10 w-10 text-[var(--am-ribbon)]" aria-hidden="true" />
+				<h3 class="display mt-4 text-2xl font-bold">{m.contact_form_sent_heading()}</h3>
+				<p class="mt-3 text-muted-foreground">{m.contact_form_sent_body()}</p>
+				<button
+					type="button"
+					onclick={() => (sent = false)}
+					class="mt-8 inline-flex h-12 items-center rounded-full bg-foreground px-7 text-sm font-semibold text-background"
+				>
+					{m.contact_form_another()}
+				</button>
+			</div>
+		{:else}
+			<form
+				method="POST"
+				action="?/send"
+				use:enhance
+				class="flex flex-col gap-5 rounded-[1.5rem] border border-border bg-card p-6 sm:p-8"
+			>
+				<ContactFields {form} {errors} />
+				<InputComp
+					{form}
+					{errors}
+					name="message"
+					type="textarea"
+					rows={5}
+					label={m.contact_form_message()}
+					required
+				/>
+				<div>
+					<p id="preferredChannel-label" class="mb-1.5 block text-sm font-medium">
+						{m.quote_channel()}
+					</p>
+					<ChannelPicker
+						name="preferredChannel"
+						bind:value={$form.preferredChannel}
+						labelledBy="preferredChannel-label"
+					/>
+				</div>
+				<button
+					type="submit"
+					disabled={$delayed}
+					class="btn-shine mt-2 h-13 w-full rounded-full bg-[var(--am-ribbon)] px-7 text-[0.95rem] font-semibold text-white shadow-[0_14px_34px_-14px_var(--am-ribbon)] disabled:opacity-60 sm:w-auto sm:self-start"
+				>
+					{$delayed ? m.quote_sending() : m.contact_form_send()}
+				</button>
+			</form>
+		{/if}
 	</div>
 </section>
 

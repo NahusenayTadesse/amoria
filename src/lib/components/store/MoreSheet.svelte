@@ -32,7 +32,7 @@
 		{ to: '/', label: m.nav_home, Icon: House },
 		{ to: '/shop', label: m.nav_shop, Icon: Gift },
 		{ to: '/school', label: m.nav_school, Icon: GraduationCap },
-		{ to: '/decor/quote', label: m.nav_decor, Icon: PartyPopper },
+		{ to: '/decor', label: m.nav_decor, Icon: PartyPopper },
 		{ to: '/rentals', label: m.nav_rentals, Icon: Tent },
 		{ to: '/renters/join', label: m.nav_rent_out, Icon: Store },
 		{ to: '/spaces', label: m.nav_spaces, Icon: Building2 },

@@ -27,7 +27,9 @@
 	};
 	let { data, kind, priced = null, maxQty = 1000, hourly = false }: Props = $props();
 
-	// Set up once from the page's form; superforms keeps it in step after that.
+	// Set up once from the page's form; superforms keeps it in step after that. `kind` may change
+	// afterwards (a rental's page switches between the two on one form): the two schemas are the
+	// same, and the server answers under the form's own id whichever action it posts to.
 	// svelte-ignore state_referenced_locally
 	const { form, errors, enhance, delayed } = createForm(
 		data,

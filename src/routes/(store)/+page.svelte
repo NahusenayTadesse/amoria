@@ -1,8 +1,10 @@
 <script lang="ts">
 	import ListingCard from '$lib/components/store/ListingCard.svelte';
+	import PackageCard from '$lib/components/store/PackageCard.svelte';
 	import ArrowUpRight from '@lucide/svelte/icons/arrow-up-right';
 	import ArrowRight from '@lucide/svelte/icons/arrow-right';
-	import Check from '@lucide/svelte/icons/check';
+	import ChevronLeft from '@lucide/svelte/icons/chevron-left';
+	import ChevronRight from '@lucide/svelte/icons/chevron-right';
 	import Flower from '@lucide/svelte/icons/flower';
 	import Gift from '@lucide/svelte/icons/gift';
 	import GraduationCap from '@lucide/svelte/icons/graduation-cap';
@@ -14,7 +16,7 @@
 	import type { AppPath } from '$lib/paths';
 	import { publicFileUrl } from '@nahu/admin-kit/files';
 	import { m } from '$lib/paraglide/messages.js';
-	import { getLocale, localizeHref } from '$lib/paraglide/runtime';
+	import { localizeHref } from '$lib/paraglide/runtime';
 	import { birr, bothCalendars, localized } from '$lib/localized';
 	import { reveal } from '$lib/actions/reveal';
 	import { chatHref, telHref } from '$lib/chat';
@@ -36,6 +38,29 @@
 		return chatHref(data.contact, text) ?? '#contact';
 	}
 	const external = (href: string) => href.startsWith('https://');
+	/** The gifts row: whether it can scroll back or on, for its arrows (hidden when it all fits). */
+	let gifts = $state<HTMLUListElement>();
+	let giftsAtStart = $state(true);
+	let giftsAtEnd = $state(true);
+	function trackGifts(node: HTMLUListElement) {
+		gifts = node;
+		const update = () => {
+			giftsAtStart = node.scrollLeft <= 4;
+			giftsAtEnd = node.scrollLeft + node.clientWidth >= node.scrollWidth - 4;
+		};
+		update();
+		node.addEventListener('scroll', update, { passive: true });
+		const observer = new ResizeObserver(update);
+		observer.observe(node);
+		return () => {
+			node.removeEventListener('scroll', update);
+			observer.disconnect();
+		};
+	}
+	function scrollGifts(direction: 1 | -1) {
+		gifts?.scrollBy({ left: direction * gifts.clientWidth * 0.75, behavior: 'smooth' });
+	}
+
 	const hasChat = $derived(!!(data.contact.whatsapp.trim() || data.contact.telegram.trim()));
 
 	/** Small photos down the left margin of the hero (wide screens only). */
@@ -77,12 +102,6 @@
 		{ title: m.home_step_2_title, body: m.home_step_2_body },
 		{ title: m.home_step_3_title, body: m.home_step_3_body }
 	];
-
-	const tiers = {
-		basic: m.home_tier_basic,
-		premium: m.home_tier_premium,
-		luxury: m.home_tier_luxury
-	};
 
 	/** The pointer's place on a card, for the soft light that follows it (`.spot` in the styles). */
 	function spot(event: PointerEvent) {
@@ -248,7 +267,7 @@
 		<a
 			use:reveal
 			onpointermove={spot}
-			href={path('/decor/quote')}
+			href={path('/decor')}
 			class="spot group relative flex min-h-[26rem] flex-col justify-between overflow-hidden rounded-[1.5rem] bg-[var(--am-ink)] p-7 text-white sm:p-10 lg:row-span-3"
 		>
 			<img
@@ -387,62 +406,90 @@
 						{m.home_gifts_heading()}
 					</h2>
 				</div>
-				<a
-					href={path('/shop')}
-					class="link-arrow group inline-flex min-h-11 items-center gap-2 text-sm font-semibold text-foreground"
-				>
-					<span class="link-arrow-text">{m.home_gifts_all()}</span>
-					<ArrowRight
-						class="h-4 w-4 transition-transform duration-300 group-hover:translate-x-1.5"
-						aria-hidden="true"
-					/>
-				</a>
+				<div class="flex items-center gap-4">
+					<a
+						href={path('/shop')}
+						class="link-arrow group inline-flex min-h-11 items-center gap-2 text-sm font-semibold text-foreground"
+					>
+						<span class="link-arrow-text">{m.home_gifts_all()}</span>
+						<ArrowRight
+							class="h-4 w-4 transition-transform duration-300 group-hover:translate-x-1.5"
+							aria-hidden="true"
+						/>
+					</a>
+					{#if !(giftsAtStart && giftsAtEnd)}
+						<div class="flex gap-2 max-sm:hidden">
+							<button
+								type="button"
+								onclick={() => scrollGifts(-1)}
+								disabled={giftsAtStart}
+								aria-label={m.home_gifts_prev()}
+								class="grid h-11 w-11 place-items-center rounded-full border border-foreground/25 transition-colors hover:border-foreground hover:bg-foreground hover:text-background disabled:pointer-events-none disabled:opacity-35"
+							>
+								<ChevronLeft class="h-5 w-5" aria-hidden="true" />
+							</button>
+							<button
+								type="button"
+								onclick={() => scrollGifts(1)}
+								disabled={giftsAtEnd}
+								aria-label={m.home_gifts_next()}
+								class="grid h-11 w-11 place-items-center rounded-full border border-foreground/25 transition-colors hover:border-foreground hover:bg-foreground hover:text-background disabled:pointer-events-none disabled:opacity-35"
+							>
+								<ChevronRight class="h-5 w-5" aria-hidden="true" />
+							</button>
+						</div>
+					{/if}
+				</div>
 			</div>
 		</div>
 
-		<ul
-			class="scroller mt-10 flex snap-x snap-mandatory gap-4 overflow-x-auto px-4 pb-4 sm:mt-14 sm:gap-6 sm:px-[max(2rem,calc((100vw-72rem)/2+2rem))]"
-		>
-			{#each data.featured as gift, index (gift.slug)}
-				{@const name = localized(gift, 'name')}
-				<li
-					use:reveal
-					style="--i: {index}"
-					class="w-[68%] shrink-0 snap-start sm:w-[34%] lg:w-[23%]"
-				>
-					<a href={path(`/buy/${gift.slug}`)} class="tile group block">
-						<div class="relative aspect-[4/5] overflow-hidden rounded-[1.25rem] bg-secondary">
-							{#if gift.image}
-								<img
-									src={publicFileUrl(gift.image)}
-									alt={gift.imageAlt ?? name}
-									loading="lazy"
-									decoding="async"
-									width="480"
-									height="600"
-									class="h-full w-full object-cover transition-transform duration-[900ms] ease-out group-hover:scale-[1.07]"
-								/>
-							{:else}
-								<div class="wrapped absolute inset-0" aria-hidden="true"></div>
-							{/if}
-							{#if gift.isFeatured}
+		<!-- Kept to the page's width, so the margins either side match; centred when it all fits. -->
+		<div class="mx-auto mt-10 max-w-6xl sm:mt-14 sm:px-8">
+			<ul
+				{@attach trackGifts}
+				class="scroller flex snap-x snap-mandatory justify-center-safe gap-4 overflow-x-auto px-4 pb-4 sm:gap-6 sm:px-0"
+			>
+				{#each data.featured as gift, index (gift.slug)}
+					{@const name = localized(gift, 'name')}
+					<li
+						use:reveal
+						style="--i: {index}"
+						class="w-[68%] shrink-0 snap-start sm:w-[calc((100%-3rem)/3)] lg:w-[calc((100%-4.5rem)/4)]"
+					>
+						<a href={path(`/buy/${gift.slug}`)} class="tile group block">
+							<div class="relative aspect-[4/5] overflow-hidden rounded-[1.25rem] bg-secondary">
+								{#if gift.image}
+									<img
+										src={publicFileUrl(gift.image)}
+										alt={gift.imageAlt ?? name}
+										loading="lazy"
+										decoding="async"
+										width="480"
+										height="600"
+										class="h-full w-full object-cover transition-transform duration-[900ms] ease-out group-hover:scale-[1.07]"
+									/>
+								{:else}
+									<div class="wrapped absolute inset-0" aria-hidden="true"></div>
+								{/if}
+								{#if gift.isFeatured}
+									<span
+										class="absolute top-3 left-3 rounded-full bg-[var(--am-foil)] px-2.5 py-1 text-xs font-semibold text-white"
+										>{m.product_featured()}</span
+									>
+								{/if}
 								<span
-									class="absolute top-3 left-3 rounded-full bg-[var(--am-foil)] px-2.5 py-1 text-xs font-semibold text-white"
-									>{m.product_featured()}</span
+									class="absolute inset-x-3 bottom-3 flex translate-y-3 items-center justify-center rounded-full bg-white/95 py-2.5 text-sm font-semibold text-[var(--am-ink)] opacity-0 shadow-lg transition-all duration-500 group-hover:translate-y-0 group-hover:opacity-100 group-focus-visible:translate-y-0 group-focus-visible:opacity-100 max-sm:translate-y-0 max-sm:opacity-100"
 								>
-							{/if}
-							<span
-								class="absolute inset-x-3 bottom-3 flex translate-y-3 items-center justify-center rounded-full bg-white/95 py-2.5 text-sm font-semibold text-[var(--am-ink)] opacity-0 shadow-lg transition-all duration-500 group-hover:translate-y-0 group-hover:opacity-100 group-focus-visible:translate-y-0 group-focus-visible:opacity-100 max-sm:translate-y-0 max-sm:opacity-100"
-							>
-								{m.home_gifts_buy()}
-							</span>
-						</div>
-						<h3 class="mt-3 text-[0.95rem] leading-snug font-medium">{name}</h3>
-						<p class="text-[0.95rem] font-semibold tabular-nums">{birr(gift.price)}</p>
-					</a>
-				</li>
-			{/each}
-		</ul>
+									{m.home_gifts_buy()}
+								</span>
+							</div>
+							<h3 class="mt-3 text-[0.95rem] leading-snug font-medium">{name}</h3>
+							<p class="text-[0.95rem] font-semibold tabular-nums">{birr(gift.price)}</p>
+						</a>
+					</li>
+				{/each}
+			</ul>
+		</div>
 	</section>
 {/if}
 
@@ -518,78 +565,7 @@
 			class="mt-8 max-md:-mx-4 max-md:flex max-md:snap-x max-md:snap-mandatory max-md:[scrollbar-width:none] max-md:gap-4 max-md:overflow-x-auto max-md:px-4 max-md:pb-2 sm:mt-14 md:grid md:grid-cols-3 md:gap-5 max-md:[&::-webkit-scrollbar]:hidden"
 		>
 			{#each data.packages as pack, index (pack.id)}
-				{@const name = localized(pack, 'name')}
-				{@const summary = localized(pack, 'summary')}
-				{@const inclusions =
-					getLocale() === 'am' && pack.inclusionsAm.length ? pack.inclusionsAm : pack.inclusions}
-				<article
-					use:reveal
-					style="--i: {index}"
-					class={[
-						'pack group flex flex-col overflow-hidden rounded-[1.5rem] border bg-card transition-[transform,box-shadow] duration-500 hover:-translate-y-1.5 hover:shadow-[0_30px_60px_-32px_var(--am-ink)] max-md:w-[80%] max-md:shrink-0 max-md:snap-center',
-						pack.tier === 'premium' ? 'border-[var(--am-foil)]' : 'border-border'
-					]}
-				>
-					<div class="relative aspect-[4/3] overflow-hidden bg-secondary">
-						{#if pack.image}
-							<img
-								src={publicFileUrl(pack.image)}
-								alt={pack.imageAlt ?? name}
-								loading="lazy"
-								decoding="async"
-								width="640"
-								height="480"
-								class="h-full w-full object-cover transition-transform duration-[900ms] group-hover:scale-105"
-							/>
-						{:else}
-							<div
-								class={['pack-art absolute inset-0', `tier-${pack.tier}`]}
-								aria-hidden="true"
-							></div>
-						{/if}
-						<span
-							class="absolute top-3 left-3 rounded-full bg-white/95 px-3 py-1 text-xs font-semibold tracking-wide text-[var(--am-ink)] uppercase"
-						>
-							{tiers[pack.tier]()}
-						</span>
-					</div>
-					<div class="flex flex-1 flex-col p-6">
-						<p class="text-xs font-semibold tracking-[0.18em] text-[var(--am-foil)] uppercase">
-							{localized({ name: pack.eventName, nameAm: pack.eventNameAm }, 'name')}
-						</p>
-						<h3 class="display mt-1 text-2xl font-bold">{name}</h3>
-						{#if summary}<p class="mt-2 line-clamp-2 text-sm text-muted-foreground">
-								{summary}
-							</p>{/if}
-						{#if inclusions.length}
-							<ul class="mt-4 space-y-2 text-sm">
-								{#each inclusions as item, i (i)}
-									<li class="flex gap-2.5">
-										<Check
-											class="mt-0.5 h-4 w-4 shrink-0 text-[var(--am-ribbon)]"
-											aria-hidden="true"
-										/>{item}
-									</li>
-								{/each}
-							</ul>
-						{/if}
-						<div class="mt-auto flex items-end justify-between gap-3 pt-6">
-							<div>
-								<p class="text-xs text-muted-foreground">{m.home_packages_from()}</p>
-								<p class="display text-xl font-bold tabular-nums">{birr(pack.startingPrice)}</p>
-							</div>
-							<a
-								href={talk(m.chat_package({ name }))}
-								target={external(talk(m.chat_package({ name }))) ? '_blank' : undefined}
-								rel={external(talk(m.chat_package({ name }))) ? 'noopener noreferrer' : undefined}
-								class="inline-flex h-11 items-center gap-1.5 rounded-full border border-foreground/30 px-4 text-sm font-semibold transition-colors hover:border-foreground hover:bg-foreground hover:text-background"
-							>
-								{m.home_packages_ask()}
-								<ArrowUpRight class="h-4 w-4" aria-hidden="true" />
-							</a>
-						</div>
-					</div>
-				</article>
+				<PackageCard {pack} {index} class="max-md:w-[80%] max-md:shrink-0 max-md:snap-center" />
 			{/each}
 		</div>
 	</section>
@@ -1013,6 +989,12 @@
 		scrollbar-width: none;
 		scroll-padding-inline: 1rem;
 	}
+	/* The row has no side padding from here up: a card rests flush with its edge. */
+	@media (min-width: 40rem) {
+		.scroller {
+			scroll-padding-inline: 0;
+		}
+	}
 	.scroller::-webkit-scrollbar {
 		display: none;
 	}
@@ -1077,27 +1059,6 @@
 	}
 
 	/* ---------- Packages ---------- */
-	.pack-art.tier-basic {
-		background:
-			radial-gradient(circle at 30% 30%, #bfdcc9, transparent 55%),
-			radial-gradient(circle at 75% 70%, #c9dccd, transparent 55%), var(--secondary);
-	}
-	.pack-art.tier-premium {
-		background:
-			radial-gradient(circle at 28% 32%, #2f8a5e, transparent 55%),
-			radial-gradient(circle at 76% 72%, #f6dc95, transparent 55%), #bfdcc9;
-	}
-	.pack-art.tier-luxury {
-		background:
-			radial-gradient(circle at 30% 30%, #3f8a63, transparent 55%),
-			radial-gradient(circle at 74% 74%, #d4a23a, transparent 55%), #1d5b3d;
-	}
-	.pack-art {
-		transition: transform 0.9s ease;
-	}
-	.pack:hover .pack-art {
-		transform: scale(1.08);
-	}
 
 	/* ---------- School ---------- */
 	.seat {

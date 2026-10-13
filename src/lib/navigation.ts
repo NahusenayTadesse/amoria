@@ -27,6 +27,7 @@ import PackageOpen from '@lucide/svelte/icons/package-open';
 import Lightbulb from '@lucide/svelte/icons/lightbulb';
 import Clock from '@lucide/svelte/icons/clock';
 import MessageSquareQuote from '@lucide/svelte/icons/message-square-quote';
+import Inbox from '@lucide/svelte/icons/inbox';
 import Building2 from '@lucide/svelte/icons/building-2';
 import ShieldCheck from '@lucide/svelte/icons/shield-check';
 import UserCog from '@lucide/svelte/icons/user-cog';
@@ -42,6 +43,7 @@ export const NAVIGATION: NavItem[] = [
 	{ title: 'Today', url: '/dashboard', icon: LayoutDashboard },
 	{ title: 'Orders', url: '/dashboard/orders', icon: ShoppingBag },
 	{ title: 'Quote requests', url: '/dashboard/quote-requests', icon: MessageSquareQuote },
+	{ title: 'Messages', url: '/dashboard/messages', icon: Inbox },
 	{ title: 'Products', url: '/dashboard/products', icon: Package },
 	{ title: 'Bundles', url: '/dashboard/bundles', icon: Gift },
 	{ title: 'Categories', url: '/dashboard/categories', icon: Tags },

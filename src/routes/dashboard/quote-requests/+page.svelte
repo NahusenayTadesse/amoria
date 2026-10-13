@@ -13,8 +13,9 @@
 	<div>
 		<h1 class="text-2xl font-semibold">Quote requests</h1>
 		<p class="text-muted-foreground">
-			What customers send from "Plan your décor". Open one to see the details and reach the customer
-			the way they asked.
+			What customers send from "Plan your décor" and the spaces' booking forms. Open one to see the
+			details and reach the customer the way they asked. Notes from the contact page are under
+			Messages.
 		</p>
 	</div>
 
@@ -23,8 +24,8 @@
 			{columns}
 			data={data.rows}
 			server={data.server}
-			facetKeys={['status']}
-			facetLabels={{ status: 'Status' }}
+			facetKeys={['kind', 'status']}
+			facetLabels={{ kind: 'For', status: 'Status' }}
 			dateFilter="Received"
 			fileName="Quote requests"
 		/>

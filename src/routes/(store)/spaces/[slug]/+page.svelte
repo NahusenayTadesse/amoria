@@ -3,6 +3,7 @@
 	import ArrowRight from '@lucide/svelte/icons/arrow-right';
 	import Building2 from '@lucide/svelte/icons/building-2';
 	import Check from '@lucide/svelte/icons/check';
+	import MessageCircle from '@lucide/svelte/icons/message-circle';
 	import Phone from '@lucide/svelte/icons/phone';
 	import Ruler from '@lucide/svelte/icons/ruler';
 	import Users from '@lucide/svelte/icons/users';
@@ -18,6 +19,7 @@
 	import { reveal } from '$lib/actions/reveal';
 	import { chatHref, telHref } from '$lib/chat';
 	import Gallery from '$lib/components/store/Gallery.svelte';
+	import SpaceBookingForm from '$lib/components/store/SpaceBookingForm.svelte';
 
 	let { data } = $props();
 
@@ -79,7 +81,7 @@
 	const ldTag = $derived(`<script type="application/ld+json">${jsonLd}<${'/'}script>`);
 </script>
 
-<!-- eslint-disable svelte/no-navigation-without-resolve -- external chat and phone links -->
+<!-- eslint-disable svelte/no-navigation-without-resolve -- external chat and phone links, and #book -->
 <svelte:head>
 	<title>{m.spaces_space_meta_title({ name })}</title>
 	<meta name="description" content={metaDescription} />
@@ -167,22 +169,28 @@
 				{/if}
 			</div>
 
-			<p class="rise mt-6 max-w-[52ch] text-sm text-muted-foreground" style="--i: 5">
-				{m.spaces_book_note()}
-			</p>
-			<div class="rise mt-5 flex flex-wrap items-center gap-3" style="--i: 5">
+			<div class="rise mt-8 flex flex-wrap items-center gap-3" style="--i: 5">
 				<a
-					href={ask ?? path('/contact')}
-					target={ask ? '_blank' : undefined}
-					rel={ask ? 'noopener noreferrer' : undefined}
+					href="#book"
 					class="btn-shine group inline-flex h-13 items-center gap-2 rounded-full bg-[var(--am-ribbon)] px-7 text-[0.95rem] font-semibold text-white shadow-[0_14px_34px_-14px_var(--am-ribbon)] transition-transform duration-300 hover:-translate-y-0.5"
 				>
-					{m.spaces_book()}
+					{m.spaces_book_this()}
 					<ArrowRight
 						class="h-4 w-4 transition-transform duration-300 group-hover:translate-x-1"
 						aria-hidden="true"
 					/>
 				</a>
+				{#if ask}
+					<a
+						href={ask}
+						target="_blank"
+						rel="noopener noreferrer"
+						class="inline-flex h-13 items-center gap-2 rounded-full border border-foreground/30 px-7 text-[0.95rem] font-semibold transition-all duration-300 hover:-translate-y-0.5 hover:border-foreground"
+					>
+						<MessageCircle class="h-4 w-4" aria-hidden="true" />
+						{m.spaces_book()}
+					</a>
+				{/if}
 				{#if call}
 					<a
 						href={call}
@@ -249,6 +257,27 @@
 			</div>
 		</section>
 	{/if}
+
+	<section
+		id="book"
+		class="mt-20 grid scroll-mt-24 gap-10 sm:mt-28 lg:grid-cols-[0.8fr_1.2fr] lg:gap-14"
+		aria-labelledby="space-book"
+	>
+		<div use:reveal>
+			<p class="text-xs font-semibold tracking-[0.22em] text-[var(--am-ribbon)] uppercase">
+				{m.spaces_book_kicker()}
+			</p>
+			<h2 id="space-book" class="display mt-3 text-3xl leading-[1.08] font-bold sm:text-4xl">
+				{m.spaces_book_heading({ name })}
+			</h2>
+			<p class="mt-5 max-w-[46ch] text-base text-muted-foreground sm:text-lg">
+				{m.spaces_book_note()}
+			</p>
+		</div>
+		<div use:reveal>
+			<SpaceBookingForm data={data.form} events={data.events} {name} />
+		</div>
+	</section>
 </div>
 
 <style>

@@ -51,9 +51,10 @@
 	const search = $derived(building ? '' : page.url.search);
 
 	const links = [
+		{ to: '/', label: m.nav_home, desktopOnly: true },
 		{ to: '/shop', label: m.nav_shop, desktopOnly: false },
 		{ to: '/school', label: m.nav_school, desktopOnly: false },
-		{ to: '/decor/quote', label: m.nav_decor, desktopOnly: false },
+		{ to: '/decor', label: m.nav_decor, desktopOnly: false },
 		{ to: '/rentals', label: m.nav_rentals, desktopOnly: false },
 		{ to: '/spaces', label: m.nav_spaces, desktopOnly: false },
 		{ to: '/about', label: m.nav_about, desktopOnly: true },
@@ -61,8 +62,10 @@
 	];
 
 	/** Whether the visitor is on this link's page, in either language (`/am/about` is `/about`). */
-	const isCurrent = (to: string) =>
-		deLocalizeHref(page.url.pathname).startsWith(to === '/decor/quote' ? '/decor' : to);
+	const isCurrent = (to: string) => {
+		const here = deLocalizeHref(page.url.pathname);
+		return to === '/' ? here === '/' : here.startsWith(to);
+	};
 
 	const menuOpen = $derived(page.state.sheet === 'more');
 </script>
@@ -104,8 +107,8 @@
 					href={resolve(localizeHref(link.to) as AppPath)}
 					aria-current={isCurrent(link.to) ? 'page' : undefined}
 					class={[
-						'rounded-full px-3 py-2.5 font-medium text-white/90 hover:bg-white/10 aria-[current=page]:bg-white/15 aria-[current=page]:text-[var(--am-gold)]',
-						link.desktopOnly && 'max-sm:hidden'
+						'rounded-full px-3 py-2.5 font-medium whitespace-nowrap text-white/90 hover:bg-white/10 aria-[current=page]:bg-white/15 aria-[current=page]:text-[var(--am-gold)] max-lg:px-2.5',
+						link.desktopOnly && 'max-lg:hidden'
 					]}
 				>
 					{link.label()}

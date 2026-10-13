@@ -93,7 +93,9 @@
 						/>
 					</a>
 				{/if}
-				<span
+				<!-- Its own link: this row sits above the card's link, so a plain label here would not click. -->
+				<a
+					href={path(`/school/${course.slug}`)}
 					class="inline-flex h-11 items-center gap-1.5 text-sm font-semibold text-foreground transition-colors group-hover:text-[var(--am-ribbon)]"
 				>
 					{m.school_view_course()}
@@ -101,7 +103,7 @@
 						class="h-4 w-4 transition-transform duration-300 group-hover:translate-x-1.5"
 						aria-hidden="true"
 					/>
-				</span>
+				</a>
 			</div>
 		</div>
 	</div>

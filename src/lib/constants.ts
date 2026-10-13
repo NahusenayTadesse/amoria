@@ -130,6 +130,8 @@ export const PACKAGE_TIERS = ['basic', 'premium', 'luxury'] as const;
 export const CONTACT_CHANNELS = ['whatsapp', 'telegram', 'sms', 'email', 'phone'] as const;
 
 export const QUOTE_REQUEST_STATUSES = ['new', 'contacted', 'quoted', 'won', 'lost'] as const;
+/** What a request is about: décor (`/decor/quote`), booking a space, or a note from `/contact`. */
+export const QUOTE_REQUEST_KINDS = ['decor', 'space', 'contact'] as const;
 
 export const QUOTE_STATUSES = [
 	'draft',

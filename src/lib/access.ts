@@ -32,6 +32,7 @@ export const access = createAccess({
 		{ prefix: '/dashboard/spaces', permission: 'catalog.manage' },
 		{ prefix: '/dashboard/school', permission: 'school.manage' },
 		{ prefix: '/dashboard/quote-requests', permission: 'quotes.manage' },
+		{ prefix: '/dashboard/messages', permission: 'quotes.manage' },
 		{ prefix: '/dashboard/renters', permission: 'renters.manage' },
 		{ prefix: '/dashboard/settings', permission: 'settings.manage' },
 		{ prefix: '/dashboard/admin', permission: 'staff.manage' }

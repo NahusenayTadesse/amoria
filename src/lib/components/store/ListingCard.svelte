@@ -134,13 +134,13 @@
 			{/if}
 		</ul>
 
-		<div class="mt-auto flex items-end justify-between gap-3 pt-5">
+		<div class="mt-auto flex flex-col gap-3 pt-5">
 			<div>
 				<p class="display text-lg font-bold tabular-nums">{price.amount}</p>
 				{#if price.unit}<p class="text-xs text-muted-foreground">{price.unit}</p>{/if}
 			</div>
 			<span
-				class="inline-flex h-10 items-center gap-1.5 rounded-full bg-secondary px-4 text-sm font-semibold transition-colors group-hover:bg-[var(--am-ribbon)] group-hover:text-white"
+				class="inline-flex h-10 w-full items-center justify-center gap-1.5 rounded-full bg-secondary px-4 text-sm font-semibold whitespace-nowrap transition-colors group-hover:bg-[var(--am-ribbon)] group-hover:text-white"
 			>
 				{listing.pricing === 'fixed' ? m.market_book_now() : m.market_ask_quote()}
 				<ArrowRight class="h-4 w-4" aria-hidden="true" />

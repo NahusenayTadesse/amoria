@@ -1,4 +1,4 @@
-import { count, desc, eq, like, or } from 'drizzle-orm';
+import { and, count, desc, eq, like, ne, or } from 'drizzle-orm';
 import {
 	buildWhere,
 	currentQuery,
@@ -9,11 +9,16 @@ import {
 	type WhereSpec
 } from '@nahu/admin-kit/server/queryFilters';
 import { db } from '$lib/server/db';
-import { eventType, quoteRequest } from '$lib/server/db/schema';
-import { QUOTE_REQUEST_STATUSES } from '$lib/constants';
-import { QUOTE_REQUEST_LABELS, type QuoteRequestStatus } from '$lib/quoteRequestStatus';
+import { eventType, quoteRequest, rentalSpace } from '$lib/server/db/schema';
+import { QUOTE_REQUEST_KINDS, QUOTE_REQUEST_STATUSES } from '$lib/constants';
+import {
+	QUOTE_REQUEST_KIND_LABELS,
+	QUOTE_REQUEST_LABELS,
+	type QuoteRequestKind,
+	type QuoteRequestStatus
+} from '$lib/quoteRequestStatus';
 
-const FILTERS = ['status'] as const;
+const FILTERS = ['status', 'kind'] as const;
 const SORTS = { createdAt: quoteRequest.createdAt, eventDate: quoteRequest.eventDate };
 
 export const load = async ({ url }) => {
@@ -31,10 +36,16 @@ export const load = async ({ url }) => {
 			status: (v) =>
 				(QUOTE_REQUEST_STATUSES as readonly string[]).includes(v)
 					? eq(quoteRequest.status, v as QuoteRequestStatus)
+					: undefined,
+			kind: (v) =>
+				(QUOTE_REQUEST_KINDS as readonly string[]).includes(v)
+					? eq(quoteRequest.kind, v as QuoteRequestKind)
 					: undefined
 		}
 	};
-	const where = buildWhere(query, spec);
+	// Contact-page messages have their own page (`/dashboard/messages`).
+	const notMessage = ne(quoteRequest.kind, 'contact');
+	const where = and(notMessage, buildWhere(query, spec));
 
 	const [rows, [{ total }], facets] = await Promise.all([
 		db
@@ -43,6 +54,8 @@ export const load = async ({ url }) => {
 				createdAt: quoteRequest.createdAt,
 				contactName: quoteRequest.contactName,
 				contactPhone: quoteRequest.contactPhone,
+				kind: quoteRequest.kind,
+				spaceName: rentalSpace.name,
 				eventName: eventType.name,
 				eventDate: quoteRequest.eventDate,
 				guestCount: quoteRequest.guestCount,
@@ -51,6 +64,7 @@ export const load = async ({ url }) => {
 			})
 			.from(quoteRequest)
 			.leftJoin(eventType, eq(eventType.id, quoteRequest.eventTypeId))
+			.leftJoin(rentalSpace, eq(rentalSpace.id, quoteRequest.spaceId))
 			.where(where)
 			.orderBy(...(orderBy(query, SORTS) ?? [desc(quoteRequest.createdAt)]))
 			.limit(query.limit)
@@ -61,9 +75,16 @@ export const load = async ({ url }) => {
 				db
 					.select({ value: quoteRequest.status, count: count() })
 					.from(quoteRequest)
-					.where(buildWhere(query, spec, { except: 'status' }))
+					.where(and(notMessage, buildWhere(query, spec, { except: 'status' })))
 					.groupBy(quoteRequest.status)
-					.then((list) => list.map((f) => ({ ...f, label: QUOTE_REQUEST_LABELS[f.value] })))
+					.then((list) => list.map((f) => ({ ...f, label: QUOTE_REQUEST_LABELS[f.value] }))),
+			kind: () =>
+				db
+					.select({ value: quoteRequest.kind, count: count() })
+					.from(quoteRequest)
+					.where(and(notMessage, buildWhere(query, spec, { except: 'kind' })))
+					.groupBy(quoteRequest.kind)
+					.then((list) => list.map((f) => ({ ...f, label: QUOTE_REQUEST_KIND_LABELS[f.value] })))
 		})
 	]);
 

@@ -53,7 +53,7 @@
 		{ to: '/', label: m.nav_home },
 		{ to: '/shop', label: m.nav_shop },
 		{ to: '/school', label: m.nav_school },
-		{ to: '/decor/quote', label: m.nav_decor },
+		{ to: '/decor', label: m.nav_decor },
 		{ to: '/rentals', label: m.nav_rentals },
 		{ to: '/spaces', label: m.nav_spaces },
 		{ to: '/about', label: m.nav_about },

@@ -29,6 +29,8 @@ export type HomePackage = {
 	inclusions: string[];
 	inclusionsAm: string[];
 	startingPrice: number;
+	eventTypeId: number;
+	eventSlug: string;
 	eventName: string;
 	eventNameAm: string | null;
 	image: string | null;
@@ -53,8 +55,18 @@ function asList(value: unknown, max: number): string[] {
 		: [];
 }
 
+/** The home page's three. */
 export function homePackages(): Promise<HomePackage[]> {
-	return cached('home:packages', { ttlMs: TTL, tags: ['catalog'] }, async () => {
+	return decorPackages(3, 4);
+}
+
+/**
+ * The packages on sale with their kind of event and first photo, in the shop's order: `limit` of
+ * them (all when unset), each with up to `inclusions` of its inclusions.
+ */
+export function decorPackages(limit?: number, inclusions = 12): Promise<HomePackage[]> {
+	const key = `decor:packages:${limit ?? 'all'}:${inclusions}`;
+	return cached(key, { ttlMs: TTL, tags: ['catalog'] }, async () => {
 		try {
 			const rows = await db
 				.select({
@@ -68,6 +80,8 @@ export function homePackages(): Promise<HomePackage[]> {
 					inclusions: decorPackage.inclusions,
 					inclusionsAm: decorPackage.inclusionsAm,
 					startingPrice: decorPackage.startingPrice,
+					eventTypeId: decorPackage.eventTypeId,
+					eventSlug: eventType.slug,
 					eventName: eventType.name,
 					eventNameAm: eventType.nameAm
 				})
@@ -78,7 +92,7 @@ export function homePackages(): Promise<HomePackage[]> {
 				)
 				.where(and(eq(decorPackage.isActive, true), notDeleted(decorPackage)))
 				.orderBy(asc(decorPackage.sortOrder), asc(decorPackage.startingPrice))
-				.limit(3);
+				.limit(limit ?? 1000);
 			if (!rows.length) return [];
 
 			const images = await db
@@ -104,13 +118,13 @@ export function homePackages(): Promise<HomePackage[]> {
 
 			return rows.map((row) => ({
 				...row,
-				inclusions: asList(row.inclusions, 4),
-				inclusionsAm: asList(row.inclusionsAm, 4),
+				inclusions: asList(row.inclusions, inclusions),
+				inclusionsAm: asList(row.inclusionsAm, inclusions),
 				image: first.get(row.id)?.fileName ?? null,
 				imageAlt: first.get(row.id)?.alt ?? null
 			}));
 		} catch (err) {
-			console.error('Home: packages:', err);
+			console.error('Décor packages:', err);
 			return [];
 		}
 	});

@@ -9,7 +9,8 @@
 	import { createForm } from '@nahu/admin-kit/forms/createForm';
 	import { m } from '$lib/paraglide/messages.js';
 	import { getLocale, localizeHref } from '$lib/paraglide/runtime';
-	import { localized } from '$lib/localized';
+	import { birr, localized } from '$lib/localized';
+	import { publicFileUrl } from '@nahu/admin-kit/files';
 	import { quoteRequestSchema } from '$lib/schemas/quote';
 	import { EVENT_TYPE_UNSURE_IMAGE, eventTypeImage } from '$lib/eventTypeImages';
 	import { QUOTE_ENDPOINT, enqueue, flushQueue, requestBackgroundSync } from '$lib/offlineQueue';
@@ -80,6 +81,41 @@
 		{ value: '', name: m.quote_event_type_unsure(), image: EVENT_TYPE_UNSURE_IMAGE }
 	]);
 
+	const chosenKind = $derived(
+		data.events.find((event) => String(event.id) === String($form.eventTypeId ?? ''))
+	);
+	const chosenPackage = $derived(
+		data.packages.find((pack) => String(pack.id) === String($form.packageId ?? ''))
+	);
+
+	/**
+	 * The chosen kind's packages as picture cards with their starting price, then "None yet". Only
+	 * once a kind is chosen: a package with no photo of its own shows its kind's.
+	 */
+	const packageItems = $derived(
+		chosenKind
+			? [
+					...data.packages
+						.filter((pack) => pack.eventTypeId === chosenKind.id)
+						.map((pack) => ({
+							value: pack.id,
+							name: localized(pack, 'name'),
+							description: birr(pack.startingPrice),
+							image: pack.image ? publicFileUrl(pack.image) : eventTypeImage(chosenKind.slug)
+						})),
+					{ value: '', name: m.quote_package_none(), image: EVENT_TYPE_UNSURE_IMAGE }
+				]
+			: []
+	);
+
+	/** A new kind drops a package that belongs to another. */
+	function setKind(value: typeof $form.eventTypeId) {
+		$form.eventTypeId = value;
+		if (chosenPackage && String(chosenPackage.eventTypeId) !== String(value ?? '')) {
+			$form.packageId = undefined;
+		}
+	}
+
 	const labelClass = 'mb-1.5 block text-sm font-medium';
 </script>
 
@@ -105,7 +141,7 @@
 	{/snippet}
 </PageHero>
 
-<section class="mx-auto max-w-2xl px-4 pb-24 sm:px-8">
+<section id="quote-form" class="mx-auto max-w-2xl scroll-mt-24 px-4 pb-24 sm:px-8">
 	{#if outcome}
 		<div
 			class="rounded-[1.5rem] border border-border bg-card p-7 text-center sm:p-10"
@@ -138,15 +174,43 @@
 			<fieldset class="flex flex-col gap-4">
 				<legend class="display mb-1 text-xl font-bold">{m.quote_details()}</legend>
 
-				<div>
-					<p id="eventTypeId-label" class={labelClass}>{m.quote_event_type()}</p>
-					<ImageSelect
-						name="eventTypeId"
-						items={eventItems}
-						bind:value={$form.eventTypeId}
-						labelledBy="eventTypeId-label"
-					/>
-				</div>
+				<!-- The kind of event, then that kind's packages; with a package chosen its kind is settled. -->
+				{#if chosenPackage}
+					<InputComp {form} {errors} name="eventTypeId" type="hidden" />
+					<p class="flex flex-wrap items-center gap-x-2 text-sm">
+						<span class="font-medium">{m.quote_event_type()}:</span>
+						<span>{chosenKind ? localized(chosenKind, 'name') : ''}</span>
+						<button
+							type="button"
+							onclick={() => ($form.packageId = undefined)}
+							class="font-semibold text-[var(--am-ribbon)] underline underline-offset-4"
+						>
+							{m.quote_event_type_change()}
+						</button>
+					</p>
+				{:else}
+					<div>
+						<p id="eventTypeId-label" class={labelClass}>{m.quote_event_type()}</p>
+						<ImageSelect
+							name="eventTypeId"
+							items={eventItems}
+							bind:value={() => $form.eventTypeId, setKind}
+							labelledBy="eventTypeId-label"
+						/>
+					</div>
+				{/if}
+
+				{#if packageItems.length > 1}
+					<div>
+						<p id="packageId-label" class={labelClass}>{m.quote_package()}</p>
+						<ImageSelect
+							name="packageId"
+							items={packageItems}
+							bind:value={$form.packageId}
+							labelledBy="packageId-label"
+						/>
+					</div>
+				{/if}
 
 				<div class="grid gap-4 sm:grid-cols-2">
 					<div>
@@ -190,20 +254,6 @@
 					/>
 					<InputComp {form} {errors} name="budget" type="number" min={0} label={m.quote_budget()} />
 				</div>
-
-				{#if data.packages.length}
-					<InputComp
-						{form}
-						{errors}
-						name="packageId"
-						type="select"
-						label={m.quote_package()}
-						items={[
-							{ value: '', name: m.quote_package_none() },
-							...data.packages.map((pack) => ({ value: pack.id, name: localized(pack, 'name') }))
-						]}
-					/>
-				{/if}
 
 				<InputComp
 					{form}
